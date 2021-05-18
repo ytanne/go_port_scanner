@@ -6,6 +6,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -31,8 +32,18 @@ func (c *App) AddTargetToARPScan(target string) error {
 
 		log.Printf("Target ID - %d", t.ID)
 		go func() {
-			for _, ip := range t.IPs {
-				c.serv.CreateNewNmapTarget(ip, t.ID)
+			var wg sync.WaitGroup
+			var limit int = 5
+			l := len(t.IPs)
+			for i, ip := range t.IPs {
+				wg.Add(1)
+				go func() {
+					c.AddTargetToNmapScan(ip, t.ID)
+					wg.Done()
+				}()
+				if (i+1%limit == 0) || (i+1 == l) {
+					wg.Wait()
+				}
 			}
 		}()
 
