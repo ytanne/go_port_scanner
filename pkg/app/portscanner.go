@@ -81,7 +81,7 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 }
 
 func (c *App) AutonomousPortScanner() {
-	ticker := time.Tick(time.Minute * 10)
+	ticker := time.Tick(time.Minute * 30)
 	for {
 		targets, err := c.serv.RetrieveOldNmapTargets(10)
 		if err != nil {
