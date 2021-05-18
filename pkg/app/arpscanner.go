@@ -32,7 +32,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 		log.Printf("Target ID - %d", t.ID)
 		go func() {
 			for _, ip := range t.IPs {
-				c.AddTargetToNmapScan(ip, t.ID)
+				c.serv.CreateNewNmapTarget(ip, t.ID)
 			}
 		}()
 
