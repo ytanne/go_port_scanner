@@ -37,10 +37,10 @@ func (c *App) AddTargetToARPScan(target string) error {
 			l := len(t.IPs)
 			for i, ip := range t.IPs {
 				wg.Add(1)
-				go func() {
-					c.AddTargetToNmapScan(ip, t.ID)
+				go func(ip string, id int) {
+					c.AddTargetToNmapScan(ip, id)
 					wg.Done()
-				}()
+				}(ip, t.ID)
 				if (i+1%limit == 0) || (i+1 == l) {
 					wg.Wait()
 				}
