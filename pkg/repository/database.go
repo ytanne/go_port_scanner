@@ -84,7 +84,7 @@ func (d *Database) SaveNmapResult(target *entities.NmapTarget) (int, error) {
 
 func (d *Database) RetrieveOldNmapTargets(timelimit int) ([]*entities.NmapTarget, error) {
 	var result []*entities.NmapTarget
-	rows, err := d.db.Query(`select * from nmap_targets where round((julianday(datetime('now')) - julianday(scan_time)) * 1440) > $1`, timelimit)
+	rows, err := d.db.Query(`select * from nmap_targets where round((julianday(datetime('now')) - julianday(scan_time)) * 1440) > $1 LIMIT 10`, timelimit)
 	if err != nil {
 		return nil, err
 	}
