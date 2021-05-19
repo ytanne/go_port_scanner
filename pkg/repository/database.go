@@ -59,7 +59,7 @@ func (d *Database) RetrieveOldARPTargets(timelimit int) ([]*entities.ARPTarget, 
 
 func (d *Database) CreateNewNmapTarget(target string, arpId int) (*entities.NmapTarget, error) {
 	var id int
-	_, err := d.db.Exec(`INSERT INTO nmap_targets (arpscan_id, ip) VALUES ($1, $2)`, arpId, target)
+	_, err := d.db.Exec(`INSERT INTO nmap_targets (arpscan_id, ip, scan_time) VALUES ($1, $2, $3)`, arpId, target, time.Now())
 	if err != nil {
 		return nil, err
 	}

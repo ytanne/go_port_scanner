@@ -40,9 +40,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 				t.ErrMsg = err.Error()
 				t.ErrStatus = -200
 			}
-			if lastResult == -1 || lastResult != len(t.Result) {
-				c.serv.SaveNmapResult(t)
-			}
+			c.serv.SaveNmapResult(t)
 			return nil
 		}
 
@@ -83,7 +81,7 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 }
 
 func (c *App) AutonomousPortScanner() {
-	ticker := time.Tick(time.Minute * 30)
+	ticker := time.Tick(time.Minute * 10)
 	for {
 		log.Println("Starting autonomous NMAP check")
 		targets, err := c.serv.RetrieveOldNmapTargets(10)
@@ -101,9 +99,7 @@ func (c *App) AutonomousPortScanner() {
 				target.ErrMsg = err.Error()
 				target.ErrStatus = -200
 			}
-			if lastResult == -1 || lastResult != len(target.Result) {
-				c.serv.SaveNmapResult(target)
-			}
+			c.serv.SaveNmapResult(target)
 			log.Printf("Finished NMAP scan of %s", target.IP)
 		}
 		<-ticker

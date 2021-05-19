@@ -6,7 +6,6 @@ import (
 	"log"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -32,18 +31,8 @@ func (c *App) AddTargetToARPScan(target string) error {
 
 		log.Printf("Target ID - %d", t.ID)
 		go func() {
-			var wg sync.WaitGroup
-			var limit int = 5
-			l := len(t.IPs)
-			for i, ip := range t.IPs {
-				wg.Add(1)
-				go func(ip string, id int) {
-					c.AddTargetToNmapScan(ip, id)
-					wg.Done()
-				}(ip, t.ID)
-				if (i+1%limit == 0) || (i+1 == l) {
-					wg.Wait()
-				}
+			for _, ip := range t.IPs {
+				c.serv.CreateNewNmapTarget(ip, t.ID)
 			}
 		}()
 
@@ -57,10 +46,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 				t.ErrMsg = err.Error()
 				t.ErrStatus = -200
 			}
-			equal := checkIfEqual(lastResult, t.IPs)
-			if lastResult == nil || !equal {
-				c.serv.SaveARPResult(t)
-			}
+			c.serv.SaveARPResult(t)
 			return nil
 		}
 
@@ -118,10 +104,7 @@ func (c *App) AutonomousARPScanner() {
 				target.ErrMsg = err.Error()
 				target.ErrStatus = -200
 			}
-			equal := checkIfEqual(lastResult, target.IPs)
-			if lastResult == nil || !equal {
-				c.serv.SaveARPResult(target)
-			}
+			c.serv.SaveARPResult(target)
 		}
 		<-ticker
 	}
@@ -131,17 +114,14 @@ func checkIfEqual(arr1 []string, arr2 []string) bool {
 	if len(arr1) != len(arr2) {
 		return false
 	}
-	var equal bool = true
-	for _, el1 := range arr1 {
-		for _, el2 := range arr2 {
-			if el1 == el2 {
-				if equal {
-					equal = false
-				}
-			}
+	sort.Strings(arr1)
+	sort.Strings(arr2)
+	for i := 0; i < len(arr1); i++ {
+		if arr1[i] != arr2[i] {
+			return false
 		}
 	}
-	return equal
+	return true
 }
 
 func getDifference(slice1 []string, slice2 []string) []string {
