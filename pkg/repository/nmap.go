@@ -24,5 +24,5 @@ func (ns *NmapScanner) ScanNetwork(target string) ([]byte, error) {
 }
 
 func getIPs(target string) ([]byte, error) {
-	return exec.Command("nmap", "-sn", target).Output()
+	return exec.Command("nmap", "-sn", "-T3", target).Output()
 }

@@ -91,16 +91,18 @@ func (c *App) AutonomousPortScanner() {
 		}
 		log.Printf("Retrieved %d targets for NMAP scan", len(targets))
 		for _, target := range targets {
-			log.Printf("Doing NMAP scan of %s", target.IP)
-			lastResult := len(target.Result)
-			err = c.RunPortScanner(target, lastResult)
-			if err != nil {
-				log.Printf("Could not run nmap scan on %s. Error: %s", target.IP, err)
-				target.ErrMsg = err.Error()
-				target.ErrStatus = -200
-			}
-			c.serv.SaveNmapResult(target)
-			log.Printf("Finished NMAP scan of %s", target.IP)
+			go func(target *entities.NmapTarget) {
+				log.Printf("Doing NMAP scan of %s", target.IP)
+				lastResult := len(target.Result)
+				err = c.RunPortScanner(target, lastResult)
+				if err != nil {
+					log.Printf("Could not run nmap scan on %s. Error: %s", target.IP, err)
+					target.ErrMsg = err.Error()
+					target.ErrStatus = -200
+				}
+				c.serv.SaveNmapResult(target)
+				log.Printf("Finished NMAP scan of %s", target.IP)
+			}(target)
 		}
 		<-ticker
 	}
