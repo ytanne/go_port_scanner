@@ -22,7 +22,7 @@ type Store interface {
 }
 
 type NmapScan interface {
-	ScanPorts(target string) (string, error)
+	ScanPorts(target string) ([]string, error)
 	ScanNetwork(target string) ([]string, error)
 }
 

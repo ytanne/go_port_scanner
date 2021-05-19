@@ -103,13 +103,13 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 func (c *App) AutonomousARPScanner() {
 	ticker := time.Tick(time.Minute * 30)
 	for {
-		log.Println("Starting autonomous check")
+		log.Println("Starting autonomous ARP check")
 		targets, err := c.serv.RetrieveOldARPTargets(10)
 		if err != nil {
 			log.Printf("Could not retrieve old ARP targets. Error: %s", err)
 			continue
 		}
-		log.Printf("Retrieved %d targets for scan", len(targets))
+		log.Printf("Retrieved %d targets for ARP scan", len(targets))
 		for _, target := range targets {
 			lastResult := target.IPs
 			err = c.RunARPScanner(target, lastResult)

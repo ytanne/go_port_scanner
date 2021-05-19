@@ -7,21 +7,28 @@ import (
 )
 
 type NmapScanner struct {
-	repo repository.NmapScan
+	repo      repository.NmapScan
+	reNetwork *regexp.Regexp
+	rePorts   *regexp.Regexp
 }
 
 func NewNmapScanner(repo repository.NmapScan) *NmapScanner {
+	rePorts, _ := regexp.Compile(`(\d{1,5})\/(tcp|udp)[ \t]+open[ \t]+(\S+)[ \t]*(.*)?`)
+	reNetwork, _ := regexp.Compile(`(?:[0-9]{1,3}\.){3}[0-9]{1,3}`)
 	return &NmapScanner{
-		repo: repo,
+		repo:      repo,
+		reNetwork: reNetwork,
+		rePorts:   rePorts,
 	}
 }
 
-func (ps *NmapScanner) ScanPorts(target string) (string, error) {
+func (ps *NmapScanner) ScanPorts(target string) ([]string, error) {
 	ports, err := ps.repo.ScanPorts(target)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(ports), err
+	result := ps.rePorts.FindAllString(string(ports), -1)
+	return result, err
 }
 
 func (ns *NmapScanner) ScanNetwork(target string) ([]string, error) {
@@ -29,6 +36,5 @@ func (ns *NmapScanner) ScanNetwork(target string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	re, _ := regexp.Compile(`(?:[0-9]{1,3}\.){3}[0-9]{1,3}`)
-	return re.FindAllString(string(ips), -1), err
+	return ns.reNetwork.FindAllString(string(ips), -1), err
 }
