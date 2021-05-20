@@ -27,6 +27,7 @@ type Store interface {
 
 type NmapScan interface {
 	ScanPorts(target string) ([]byte, error)
+	ScanWebPorts(target string) ([]byte, error)
 	ScanNetwork(target string) ([]byte, error)
 }
 

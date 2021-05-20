@@ -31,6 +31,15 @@ func (ps *NmapScanner) ScanPorts(target string) ([]string, error) {
 	return result, err
 }
 
+func (ps *NmapScanner) ScanWebPorts(target string) ([]string, error) {
+	ports, err := ps.repo.ScanWebPorts(target)
+	if err != nil {
+		return nil, err
+	}
+	result := ps.rePorts.FindAllString(string(ports), -1)
+	return result, err
+}
+
 func (ns *NmapScanner) ScanNetwork(target string) ([]string, error) {
 	ips, err := ns.repo.ScanNetwork(target)
 	if err != nil {

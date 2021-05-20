@@ -10,7 +10,7 @@ import (
 func TestPortScan(t *testing.T) {
 	repo := repository.NewRepository(nil, nil, "", "", "")
 	nmap := NewNmapScanner(repo)
-	ports, err := nmap.ScanPorts("localhost")
+	ports, err := nmap.ScanPorts("cert.kz")
 	if err != nil {
 		t.Fatalf("Could not scan ports of localhost: %s", err)
 	}
