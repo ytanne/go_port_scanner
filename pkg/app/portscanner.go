@@ -81,7 +81,7 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 	return nil
 }
 
-func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult int) error {
+func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) error {
 	// c.serv.SendMessage(fmt.Sprintf("Starting #WEB_PORT scanning %s", target.IP))
 	ports, err := c.serv.ScanWebPorts(target.IP)
 	if err != nil {
@@ -96,12 +96,12 @@ func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult int) err
 		// c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP))
 		return nil
 	}
-	if lastResult != len(ports) {
+	target.Result = strings.Join(ports, "; ")
+	if lastResult != target.Result {
 		c.SendMessage(fmt.Sprintf("Open #WEB_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n")))
 	} else {
 		// c.SendMessage(fmt.Sprintf("No updates on #WEB_PORTS for %s", target.IP))
 	}
-	target.Result = strings.Join(ports, "; ")
 	return nil
 }
 
@@ -146,14 +146,30 @@ func (c *App) AutonomousWebPortScanner() {
 	}
 	var wg sync.WaitGroup
 	var l int = len(targets)
+	type WTargets struct {
+		WebTargets *map[string]string
+		lock       sync.Locker
+	}
+	webTargets := make(map[string]string)
+	wtarget := new(WTargets)
+	wtarget.WebTargets = &webTargets
+
 	for {
 		log.Println("Starting autonomous NMAP Web check")
 		log.Printf("There are %d targets for NMAP Web scan", l)
 		for i, target := range targets {
 			wg.Add(1)
-			go func(target *entities.NmapTarget) {
+			go func(target *entities.NmapTarget, wtarget *WTargets) {
+				var lastResult string
+				var ok bool
 				log.Printf("Doing NMAP Web scan of %s", target.IP)
-				lastResult := len(target.Result)
+
+				wtarget.lock.Lock()
+				if lastResult, ok = (*wtarget.WebTargets)[target.IP]; !ok {
+					lastResult = ""
+				}
+				wtarget.lock.Unlock()
+
 				err = c.RunWebPortScanner(target, lastResult)
 				if err != nil {
 					log.Printf("Could not run nmap scan on %s. Error: %s", target.IP, err)
@@ -162,7 +178,7 @@ func (c *App) AutonomousWebPortScanner() {
 				}
 				log.Printf("Finished NMAP scan of %s", target.IP)
 				wg.Done()
-			}(target)
+			}(target, wtarget)
 			if (i+1)%5 == 0 || (i+1) == l {
 				wg.Wait()
 			}
