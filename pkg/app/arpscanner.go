@@ -114,7 +114,9 @@ func (c *App) AutonomousARPScanner() {
 					target.ErrMsg = err.Error()
 					target.ErrStatus = -200
 				}
-				c.serv.SaveARPResult(target)
+				if _, err := c.serv.SaveARPResult(target); err != nil {
+					log.Printf("Could not save ARP result of %s. Error: %s", target.Target, err)
+				}
 				wg.Done()
 			}(target)
 			if (i+1)%2 == 0 || (i+1) == l {

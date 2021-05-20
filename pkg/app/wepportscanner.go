@@ -109,7 +109,9 @@ func (c *App) AutonomousWebPortScanner() {
 					target.ErrMsg = err.Error()
 					target.ErrStatus = -200
 				}
-				c.serv.SaveWebResult(target)
+				if _, err := c.serv.SaveWebResult(target); err != nil {
+					log.Printf("Could not save ARP result of %s. Error: %s", target.IP, err)
+				}
 				log.Printf("Finished NMAP Web scan of %s", target.IP)
 				wg.Done()
 			}(target)
