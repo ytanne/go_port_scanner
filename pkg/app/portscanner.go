@@ -58,48 +58,48 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 }
 
 func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error {
-	c.serv.SendMessage(fmt.Sprintf("Starting #ALL_PORT scanning %s", target.IP))
+	// c.serv.SendMessage(fmt.Sprintf("Starting #ALL_PORT scanning %s", target.IP))
 	ports, err := c.serv.ScanPorts(target.IP)
 	if err != nil {
 		log.Printf("Could not run Port scan on %s. Error: %s", target.IP, err)
-		c.SendMessage(fmt.Sprintf("Could not scan #ALL_PORTS of %s", target.IP))
+		// c.SendMessage(fmt.Sprintf("Could not scan #ALL_PORTS of %s", target.IP))
 		target.ErrMsg = err.Error()
 		target.ErrStatus = -200
 		return err
 	}
 	if ports == nil {
 		log.Printf("No ports found for %s", target.IP)
-		c.SendMessage(fmt.Sprintf("No open #ALL_PORTS of %s found", target.IP))
+		// c.SendMessage(fmt.Sprintf("No open #ALL_PORTS of %s found", target.IP))
 		return nil
 	}
 	if lastResult != len(ports) {
 		c.SendMessage(fmt.Sprintf("Open #ALL_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n")))
 	} else {
-		c.SendMessage(fmt.Sprintf("No updates on #ALL_PORTS for %s", target.IP))
+		// c.SendMessage(fmt.Sprintf("No updates on #ALL_PORTS for %s", target.IP))
 	}
 	target.Result = strings.Join(ports, "; ")
 	return nil
 }
 
 func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult int) error {
-	c.serv.SendMessage(fmt.Sprintf("Starting #WEB_PORT scanning %s", target.IP))
+	// c.serv.SendMessage(fmt.Sprintf("Starting #WEB_PORT scanning %s", target.IP))
 	ports, err := c.serv.ScanWebPorts(target.IP)
 	if err != nil {
 		log.Printf("Could not run Web Port scan on %s. Error: %s", target.IP, err)
-		c.SendMessage(fmt.Sprintf("Could not scan Web_PORTS of %s", target.IP))
+		// c.SendMessage(fmt.Sprintf("Could not scan Web_PORTS of %s", target.IP))
 		target.ErrMsg = err.Error()
 		target.ErrStatus = -200
 		return err
 	}
 	if ports == nil {
 		log.Printf("No ports found for %s", target.IP)
-		c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP))
+		// c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP))
 		return nil
 	}
 	if lastResult != len(ports) {
 		c.SendMessage(fmt.Sprintf("Open #WEB_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n")))
 	} else {
-		c.SendMessage(fmt.Sprintf("No updates on #WEB_PORTS for %s", target.IP))
+		// c.SendMessage(fmt.Sprintf("No updates on #WEB_PORTS for %s", target.IP))
 	}
 	target.Result = strings.Join(ports, "; ")
 	return nil

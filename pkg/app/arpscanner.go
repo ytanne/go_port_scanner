@@ -64,14 +64,14 @@ func (c *App) AddTargetToARPScan(target string) error {
 }
 
 func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) error {
-	c.serv.SendMessage(fmt.Sprintf("Starting ARP scanning %s", target.Target))
+	// c.serv.SendMessage(fmt.Sprintf("Starting ARP scanning %s", target.Target))
 	ips, err := c.serv.ScanNetwork(target.Target)
 	if err != nil {
 		c.SendMessage(fmt.Sprintf("Could not do ARP scan network of %s", target.Target))
 		return err
 	}
 	if ips == nil {
-		c.SendMessage(fmt.Sprintf("No IPs of %s found in ARP scan", target.Target))
+		// c.SendMessage(fmt.Sprintf("No IPs of %s found in ARP scan", target.Target))
 		return nil
 	}
 	sort.Strings(ips)
