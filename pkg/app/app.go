@@ -98,6 +98,8 @@ func (c *App) runCommand(cmd string) {
 		}
 	case "/nmap":
 		c.AddTargetToNmapScan(words[1], -1)
+	case "/web_nmap":
+		c.AddTargetToWebScan(words[1], -1)
 	case "/arpscan":
 		c.AddTargetToARPScan(words[1])
 	}

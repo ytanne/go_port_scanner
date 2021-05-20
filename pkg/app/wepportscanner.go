@@ -120,6 +120,6 @@ func (c *App) AutonomousWebPortScanner() {
 			}
 		}
 		log.Println("Finished autonomous NMAP web check. Taking a break")
-		time.Sleep(time.Minute * 5)
+		time.Sleep(time.Minute * 30)
 	}
 }
