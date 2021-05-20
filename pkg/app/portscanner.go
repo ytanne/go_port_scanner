@@ -148,7 +148,7 @@ func (c *App) AutonomousWebPortScanner() {
 	var l int = len(targets)
 	type WTargets struct {
 		WebTargets *map[string]string
-		lock       sync.Locker
+		mu         sync.Mutex
 	}
 	webTargets := make(map[string]string)
 	wtarget := new(WTargets)
@@ -164,11 +164,11 @@ func (c *App) AutonomousWebPortScanner() {
 				var ok bool
 				log.Printf("Doing NMAP Web scan of %s", target.IP)
 
-				wtarget.lock.Lock()
+				wtarget.mu.Lock()
 				if lastResult, ok = (*wtarget.WebTargets)[target.IP]; !ok {
 					lastResult = ""
 				}
-				wtarget.lock.Unlock()
+				wtarget.mu.Unlock()
 
 				err = c.RunWebPortScanner(target, lastResult)
 				if err != nil {
