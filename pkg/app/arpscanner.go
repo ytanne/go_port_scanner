@@ -6,6 +6,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -76,6 +77,9 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 	sort.Strings(ips)
 	equal := checkIfEqual(lastResult, ips)
 	if lastResult == nil || !equal {
+		if lastResult == nil {
+			log.Printf("Last result for %s is nil", target.Target)
+		}
 		diff := getDifference(lastResult, ips)
 		c.SendMessage(fmt.Sprintf("ARP scan: IPs of %s:\n%s", target.Target, strings.Join(diff, "\n")))
 	} else {
@@ -87,26 +91,34 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 }
 
 func (c *App) AutonomousARPScanner() {
-	ticker := time.Tick(time.Minute * 10)
+	targets, err := c.serv.RetrieveAllARPTargets()
+	if err != nil {
+		log.Fatalf("Could not obtain all ARP targets: %s", err)
+	}
+	var wg sync.WaitGroup
 	for {
 		log.Println("Starting autonomous ARP check")
-		targets, err := c.serv.RetrieveOldARPTargets(10)
-		if err != nil {
-			log.Printf("Could not retrieve old ARP targets. Error: %s", err)
-			continue
-		}
-		log.Printf("Retrieved %d targets for ARP scan", len(targets))
-		for _, target := range targets {
-			lastResult := target.IPs
-			err = c.RunARPScanner(target, lastResult)
-			if err != nil {
-				log.Printf("Could not run ARP scan on %s. Error: %s", target.Target, err)
-				target.ErrMsg = err.Error()
-				target.ErrStatus = -200
+		log.Printf("There are %d targets for ARP scan", len(targets))
+		l := len(targets)
+		for i, target := range targets {
+			wg.Add(1)
+			go func(target *entities.ARPTarget) {
+				lastResult := target.IPs
+				err = c.RunARPScanner(target, lastResult)
+				if err != nil {
+					log.Printf("Could not run ARP scan on %s. Error: %s", target.Target, err)
+					target.ErrMsg = err.Error()
+					target.ErrStatus = -200
+				}
+				c.serv.SaveARPResult(target)
+				wg.Done()
+			}(target)
+			if (i+1)%2 == 0 || (i+1) == l {
+				wg.Wait()
 			}
-			c.serv.SaveARPResult(target)
 		}
-		<-ticker
+		log.Println("Finished autonomous ARP check. Taking a break")
+		time.Sleep(5 * time.Minute)
 	}
 }
 

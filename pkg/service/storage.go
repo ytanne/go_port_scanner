@@ -31,6 +31,10 @@ func (ss *serviceStorage) RetrieveOldARPTargets(timelimit int) ([]*entities.ARPT
 	return ss.repo.RetrieveOldARPTargets(timelimit)
 }
 
+func (ss *serviceStorage) RetrieveAllARPTargets() ([]*entities.ARPTarget, error) {
+	return ss.repo.RetrieveAllARPTargets()
+}
+
 func (ss *serviceStorage) CreateNewNmapTarget(target string, id int) (*entities.NmapTarget, error) {
 	return ss.repo.CreateNewNmapTarget(target, id)
 }
@@ -45,4 +49,8 @@ func (ss *serviceStorage) SaveNmapResult(target *entities.NmapTarget) (int, erro
 
 func (ss *serviceStorage) RetrieveOldNmapTargets(timelimit int) ([]*entities.NmapTarget, error) {
 	return ss.repo.RetrieveOldNmapTargets(timelimit)
+}
+
+func (ss *serviceStorage) RetrieveAllNmapTargets() ([]*entities.NmapTarget, error) {
+	return ss.repo.RetrieveAllNmapTargets()
 }

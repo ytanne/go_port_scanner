@@ -18,9 +18,10 @@ type Config struct {
 		ChatID   int64  `yaml:"chat_id"`
 	} `yaml:"telegram"`
 	DB struct {
-		Type    string `yaml:"type"`
-		Path    string `yaml:"path"`
-		InitSQL string `yaml:"init_sql"`
+		Type     string `yaml:"type"`
+		Path     string `yaml:"path"`
+		InitSQL  string `yaml:"init_sql"`
+		AlterSQL string `yaml:"alter_sql"`
 	} `yaml:"db"`
 }
 

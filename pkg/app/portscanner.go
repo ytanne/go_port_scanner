@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -81,16 +82,17 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 }
 
 func (c *App) AutonomousPortScanner() {
-	ticker := time.Tick(time.Minute * 10)
+	targets, err := c.serv.RetrieveAllNmapTargets()
+	if err != nil {
+		log.Fatalf("Could not obtain all NMAP targets. Error: %s", err)
+	}
+	var wg sync.WaitGroup
+	var l int = len(targets)
 	for {
 		log.Println("Starting autonomous NMAP check")
-		targets, err := c.serv.RetrieveOldNmapTargets(10)
-		if err != nil {
-			log.Printf("Could not retrieve old nmap targets. Error: %s", err)
-			continue
-		}
-		log.Printf("Retrieved %d targets for NMAP scan", len(targets))
-		for _, target := range targets {
+		log.Printf("There are %d targets for NMAP scan", l)
+		for i, target := range targets {
+			wg.Add(1)
 			go func(target *entities.NmapTarget) {
 				log.Printf("Doing NMAP scan of %s", target.IP)
 				lastResult := len(target.Result)
@@ -102,8 +104,13 @@ func (c *App) AutonomousPortScanner() {
 				}
 				c.serv.SaveNmapResult(target)
 				log.Printf("Finished NMAP scan of %s", target.IP)
+				wg.Done()
 			}(target)
+			if (i+1)%3 == 0 || (i+1) == l {
+				wg.Wait()
+			}
 		}
-		<-ticker
+		log.Println("Finished autonomous ARP check. Taking a break")
+		time.Sleep(time.Minute * 5)
 	}
 }

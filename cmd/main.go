@@ -25,6 +25,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not read file from %s to initialize DB. Error: %s", cfg.DB.InitSQL, err)
 	}
+	alterSQL, err := ioutil.ReadFile(cfg.DB.AlterSQL)
+	if err != nil {
+		log.Fatalf("Could not read file from %s to initialize DB. Error: %s", cfg.DB.InitSQL, err)
+	}
 
 	db, err := sql.Open(cfg.DB.Type, cfg.DB.Path)
 	if err != nil {
@@ -32,6 +36,9 @@ func main() {
 	}
 	defer db.Close()
 	if _, err := db.Exec(string(initSQL)); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := db.Exec(string(alterSQL)); err != nil {
 		log.Fatal(err)
 	}
 
