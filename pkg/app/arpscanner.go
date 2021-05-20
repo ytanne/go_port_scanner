@@ -57,7 +57,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 			return nil
 		}
 
-		c.SendMessage(fmt.Sprintf("Previously at ARP scan of %s was found %d IPs in %s", t.ScanTime.Format(time.RFC3339), t.NumOfIPs, t.Target))
+		c.SendMessage(fmt.Sprintf("Previously at ARP scan of %s was found %d IPs in %s\n%s", t.ScanTime.Format(time.RFC3339), t.NumOfIPs, t.Target, strings.Join(t.IPs, "\n")))
 		return nil
 	}
 	log.Printf("Could not retrieve records for %s. Error: %s", target, err)
