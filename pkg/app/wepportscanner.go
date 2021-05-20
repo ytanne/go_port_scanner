@@ -99,6 +99,7 @@ func (c *App) AutonomousWebPortScanner() {
 				oldTarget, err := c.serv.RetrieveWebRecord(target.IP, target.ID)
 				if err != nil {
 					log.Printf("Could not obtain old web record. Error: %s", err)
+					log.Printf("IP: %s. ID: %d", target.IP, target.ID)
 				} else {
 					lastResult = oldTarget.Result
 				}

@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/ytanne/go_nessus/pkg/service"
 )
@@ -28,6 +29,9 @@ func (c *App) SendMessage(msg string) {
 			l := len(msg) / 2
 			c.SendMessage(msg[:l])
 			c.SendMessage(msg[l:])
+		} else if strings.Contains(err.Error(), "Too Many Requests") {
+			time.Sleep(time.Second * 45)
+			c.SendMessage(msg)
 		}
 	}
 }
