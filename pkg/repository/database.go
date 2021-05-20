@@ -147,3 +147,60 @@ func (d *Database) RetrieveAllNmapTargets() ([]*entities.NmapTarget, error) {
 	}
 	return result, nil
 }
+
+func (d *Database) CreateNewWebTarget(target string, arpId int) (*entities.NmapTarget, error) {
+	var id int
+	_, err := d.db.Exec(`INSERT INTO web_targets (arpscan_id, ip, scan_time) VALUES ($1, $2, $3)`, arpId, target, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	err = d.db.QueryRow(`SELECT last_insert_rowid()`).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	return &entities.NmapTarget{ID: id, ARPscanID: arpId, IP: target}, err
+}
+
+func (d *Database) RetrieveWebRecord(target string, id int) (*entities.NmapTarget, error) {
+	var result entities.NmapTarget
+	err := d.db.QueryRow(`SELECT id, arpscan_id, ip, result, scan_time, error_status, error_msg FROM web_targets WHERE ip = $1 AND arpscan_id = $2`, target, id).Scan(&result.ID, &result.ARPscanID, &result.IP, &result.Result, &result.ScanTime, &result.ErrStatus, &result.ErrMsg)
+	return &result, err
+}
+
+func (d *Database) SaveWebResult(target *entities.NmapTarget) (int, error) {
+	target.ScanTime = time.Now()
+	_, err := d.db.Exec(`UPDATE web_targets SET result = $1, scan_time = $2, error_status = $3, error_msg = $4 WHERE id = $5 AND ip = $6`, target.Result, target.ScanTime, target.ErrStatus, target.ErrMsg, target.ID, target.IP)
+	return target.ID, err
+}
+
+func (d *Database) RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget, error) {
+	var result []*entities.NmapTarget
+	rows, err := d.db.Query(`select * from web_targets where round((julianday(datetime('now')) - julianday(scan_time)) * 1440) > $1 LIMIT 3`, timelimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		element := new(entities.NmapTarget)
+		rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		result = append(result, element)
+	}
+	return result, nil
+}
+
+func (d *Database) RetrieveAllWebTargets() ([]*entities.NmapTarget, error) {
+	var result []*entities.NmapTarget
+	rows, err := d.db.Query(`select * from web_targets`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		element := new(entities.NmapTarget)
+		rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		result = append(result, element)
+	}
+	return result, nil
+}

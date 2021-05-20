@@ -23,6 +23,11 @@ type Store interface {
 	RetrieveNmapRecord(target string, id int) (*entities.NmapTarget, error)
 	RetrieveOldNmapTargets(timelimit int) ([]*entities.NmapTarget, error)
 	RetrieveAllNmapTargets() ([]*entities.NmapTarget, error)
+	CreateNewWebTarget(target string, id int) (*entities.NmapTarget, error)
+	SaveWebResult(target *entities.NmapTarget) (int, error)
+	RetrieveWebRecord(target string, id int) (*entities.NmapTarget, error)
+	RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget, error)
+	RetrieveAllWebTargets() ([]*entities.NmapTarget, error)
 }
 
 type NmapScan interface {

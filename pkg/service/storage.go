@@ -54,3 +54,23 @@ func (ss *serviceStorage) RetrieveOldNmapTargets(timelimit int) ([]*entities.Nma
 func (ss *serviceStorage) RetrieveAllNmapTargets() ([]*entities.NmapTarget, error) {
 	return ss.repo.RetrieveAllNmapTargets()
 }
+
+func (ss *serviceStorage) CreateNewWebTarget(target string, id int) (*entities.NmapTarget, error) {
+	return ss.repo.CreateNewWebTarget(target, id)
+}
+
+func (ss *serviceStorage) RetrieveWebRecord(target string, id int) (*entities.NmapTarget, error) {
+	return ss.repo.RetrieveWebRecord(target, id)
+}
+
+func (ss *serviceStorage) SaveWebResult(target *entities.NmapTarget) (int, error) {
+	return ss.repo.SaveWebResult(target)
+}
+
+func (ss *serviceStorage) RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget, error) {
+	return ss.repo.RetrieveOldWebTargets(timelimit)
+}
+
+func (ss *serviceStorage) RetrieveAllWebTargets() ([]*entities.NmapTarget, error) {
+	return ss.repo.RetrieveAllWebTargets()
+}

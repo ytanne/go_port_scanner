@@ -34,6 +34,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 		go func() {
 			for _, ip := range t.IPs {
 				c.serv.CreateNewNmapTarget(ip, t.ID)
+				c.serv.CreateNewWebTarget(ip, t.ID)
 			}
 		}()
 
@@ -71,7 +72,7 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 		return err
 	}
 	if ips == nil {
-		// c.SendMessage(fmt.Sprintf("No IPs of %s found in ARP scan", target.Target))
+		c.SendMessage(fmt.Sprintf("No IPs of %s found in ARP scan", target.Target))
 		return nil
 	}
 	sort.Strings(ips)
