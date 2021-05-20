@@ -134,7 +134,7 @@ func (c *App) AutonomousPortScanner() {
 				wg.Wait()
 			}
 		}
-		log.Println("Finished autonomous ARP check. Taking a break")
+		log.Println("Finished autonomous NMAP check. Taking a break")
 		time.Sleep(time.Minute * 5)
 	}
 }
@@ -159,7 +159,7 @@ func (c *App) AutonomousWebPortScanner() {
 		log.Printf("There are %d targets for NMAP Web scan", l)
 		for i, target := range targets {
 			wg.Add(1)
-			go func(target *entities.NmapTarget, wtarget *WTargets) {
+			go func(target *entities.NmapTarget) {
 				var lastResult string
 				var ok bool
 				log.Printf("Doing NMAP Web scan of %s", target.IP)
@@ -176,14 +176,14 @@ func (c *App) AutonomousWebPortScanner() {
 					target.ErrMsg = err.Error()
 					target.ErrStatus = -200
 				}
-				log.Printf("Finished NMAP scan of %s", target.IP)
+				log.Printf("Finished NMAP Web scan of %s", target.IP)
 				wg.Done()
-			}(target, wtarget)
+			}(target)
 			if (i+1)%5 == 0 || (i+1) == l {
 				wg.Wait()
 			}
 		}
-		log.Println("Finished autonomous ARP check. Taking a break")
+		log.Println("Finished autonomous NMAP check. Taking a break")
 		time.Sleep(time.Minute * 5)
 	}
 }
