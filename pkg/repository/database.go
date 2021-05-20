@@ -35,7 +35,8 @@ func (d *Database) RetrieveARPRecord(target string) (*entities.ARPTarget, error)
 	var IPs []byte
 	err := d.db.QueryRow(`SELECT id, target, num_of_ips, ips, scan_time, error_status, error_msg FROM arp_targets WHERE target = $1`, target).Scan(&result.ID, &result.Target, &result.NumOfIPs, &IPs, &result.ScanTime, &result.ErrStatus, &result.ErrMsg)
 	if err := json.Unmarshal(IPs, &result.IPs); err != nil {
-		return nil, err
+		log.Printf("Could not get IPs for %s", target)
+		return &result, nil
 	}
 	return &result, err
 }
