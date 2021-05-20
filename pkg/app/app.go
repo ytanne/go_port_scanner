@@ -47,17 +47,6 @@ func (c *App) Run() error {
 		}
 	}()
 
-	// ********* DELETE IN THE NEXT STAGE *************
-	nmapTargets, err := c.serv.RetrieveAllNmapTargets()
-	if err != nil {
-		log.Fatalf("Could not get all NMAP targets: %s", err)
-	}
-	for _, result := range nmapTargets {
-		c.serv.SaveWebResult(result)
-	}
-	log.Println("All WEB results were stored")
-	// ************************************************
-
 	go c.AutonomousARPScanner()
 	go c.AutonomousPortScanner()
 	go c.AutonomousWebPortScanner()
