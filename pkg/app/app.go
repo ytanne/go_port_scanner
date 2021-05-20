@@ -49,6 +49,7 @@ func (c *App) Run() error {
 
 	go c.AutonomousARPScanner()
 	go c.AutonomousPortScanner()
+	go c.AutonomousWebPortScanner()
 
 	var cmd string
 	for {
