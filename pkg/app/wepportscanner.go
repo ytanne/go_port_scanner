@@ -96,7 +96,7 @@ func (c *App) AutonomousWebPortScanner() {
 				var lastResult string
 				log.Printf("Doing NMAP Web scan of %s", target.IP)
 
-				oldTarget, err := c.serv.RetrieveWebRecord(target.IP, target.ID)
+				oldTarget, err := c.serv.RetrieveWebRecord(target.IP, target.ARPscanID)
 				if err != nil {
 					log.Printf("Could not obtain old web record. Error: %s", err)
 					log.Printf("IP: %s. ID: %d", target.IP, target.ID)
