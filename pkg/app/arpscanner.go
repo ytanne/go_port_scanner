@@ -14,8 +14,7 @@ import (
 
 func (c *App) AddTargetToARPScan(target string) error {
 	t, err := c.serv.RetrieveARPRecord(target)
-
-	if err == sql.ErrNoRows {
+	if err == sql.ErrNoRows || t == nil {
 		log.Printf("No records found for %s", target)
 		t, err := c.serv.CreateNewARPTarget(target)
 		if err != nil {
