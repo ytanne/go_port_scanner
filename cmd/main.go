@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	cfg := config.InitConfig("./assets/api.yaml")
+	cfg := config.InitConfig("./assets/config.yaml")
 
 	telegram, err := tg.NewTelegramConn(cfg.Telegram.APItoken, cfg.Telegram.ChatID)
 	if err != nil {
