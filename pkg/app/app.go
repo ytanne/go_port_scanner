@@ -9,21 +9,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ytanne/go_nessus/pkg/service"
+	"github.com/ytanne/go_nessus/pkg/service/nmap"
+	"github.com/ytanne/go_nessus/pkg/service/sqlite"
+	"github.com/ytanne/go_nessus/pkg/service/telegram"
 )
 
 type App struct {
-	serv *service.Service
+	communicator telegram.Communicator
+	storage      sqlite.DBKeeper
+	portScanner  nmap.NmapScanner
 }
 
-func NewApp(serv *service.Service) *App {
-	return &App{
-		serv: serv,
-	}
+func NewApp(communicator telegram.Communicator, storage sqlite.DBKeeper, portScanner nmap.NmapScanner) *App {
+	return &App{communicator, storage, portScanner}
 }
 
 func (c *App) SendMessage(msg string) {
-	if err := c.serv.SendMessage(msg); err != nil {
+	if err := c.communicator.SendMessage(msg); err != nil {
 		log.Printf("Could not send message. Error: %s", err)
 		if strings.Contains(err.Error(), "message is too long") {
 			l := len(msg) / 2
@@ -45,7 +47,7 @@ func (c *App) Run() error {
 	msgs := make(chan string, 3)
 
 	go func() {
-		err := c.serv.ReadMessage(msgs)
+		err := c.communicator.ReadMessage(msgs)
 		if err != nil {
 			log.Printf("Could not read message from the bot. Error: %s", err)
 		}
@@ -86,14 +88,14 @@ func (c *App) Run() error {
 func (c *App) runCommand(cmd string) {
 	words := strings.Fields(cmd)
 	if len(words) <= 1 {
-		if err := c.serv.SendMessage("Not enough arguments"); err != nil {
+		if err := c.communicator.SendMessage("Not enough arguments"); err != nil {
 			log.Printf("Could not send message. Error: %s", err)
 		}
 		return
 	}
 	switch words[0] {
 	case "/reply":
-		if err := c.serv.SendMessage(words[1]); err != nil {
+		if err := c.communicator.SendMessage(words[1]); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
 	case "/nmap":

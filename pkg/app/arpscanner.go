@@ -13,10 +13,10 @@ import (
 )
 
 func (c *App) AddTargetToARPScan(target string) error {
-	t, err := c.serv.RetrieveARPRecord(target)
+	t, err := c.storage.RetrieveARPRecord(target)
 	if err == sql.ErrNoRows {
 		log.Printf("No records found for %s", target)
-		t, err := c.serv.CreateNewARPTarget(target)
+		t, err := c.storage.CreateNewARPTarget(target)
 		if err != nil {
 			log.Printf("Could not add target %s to the table. Error: %s", target, err)
 			return err
@@ -27,13 +27,13 @@ func (c *App) AddTargetToARPScan(target string) error {
 			t.ErrMsg = err.Error()
 			t.ErrStatus = -200
 		}
-		c.serv.SaveARPResult(t)
+		c.storage.SaveARPResult(t)
 
 		log.Printf("Target ID - %d", t.ID)
 		go func() {
 			for _, ip := range t.IPs {
-				c.serv.CreateNewNmapTarget(ip, t.ID)
-				c.serv.CreateNewWebTarget(ip, t.ID)
+				c.storage.CreateNewNmapTarget(ip, t.ID)
+				c.storage.CreateNewWebTarget(ip, t.ID)
 			}
 		}()
 
@@ -47,7 +47,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 				t.ErrMsg = err.Error()
 				t.ErrStatus = -200
 			}
-			c.serv.SaveARPResult(t)
+			c.storage.SaveARPResult(t)
 			return nil
 		}
 
@@ -65,7 +65,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 
 func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) error {
 	// c.serv.SendMessage(fmt.Sprintf("Starting ARP scanning %s", target.Target))
-	ips, err := c.serv.ScanNetwork(target.Target)
+	ips, err := c.portScanner.ScanNetwork(target.Target)
 	if err != nil {
 		c.SendMessage(fmt.Sprintf("Could not do ARP scan network of %s", target.Target))
 		return err
@@ -94,7 +94,7 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 }
 
 func (c *App) AutonomousARPScanner() {
-	targets, err := c.serv.RetrieveAllARPTargets()
+	targets, err := c.storage.RetrieveAllARPTargets()
 	if err != nil {
 		log.Fatalf("Could not obtain all ARP targets: %s", err)
 	}
@@ -113,7 +113,7 @@ func (c *App) AutonomousARPScanner() {
 					target.ErrMsg = err.Error()
 					target.ErrStatus = -200
 				}
-				if _, err := c.serv.SaveARPResult(target); err != nil {
+				if _, err := c.storage.SaveARPResult(target); err != nil {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.Target, err)
 				}
 				wg.Done()

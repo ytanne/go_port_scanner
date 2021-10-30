@@ -8,8 +8,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ytanne/go_nessus/pkg/app"
 	"github.com/ytanne/go_nessus/pkg/config"
-	"github.com/ytanne/go_nessus/pkg/repository"
+	dbRepository "github.com/ytanne/go_nessus/pkg/repository/sqlite"
 	"github.com/ytanne/go_nessus/pkg/service"
+	dbService "github.com/ytanne/go_nessus/pkg/service/sqlite"
 	"github.com/ytanne/go_nessus/pkg/tg"
 )
 
@@ -33,6 +34,9 @@ func main() {
 	if _, err := db.Exec(string(initSQL)); err != nil {
 		log.Fatal(err)
 	}
+
+	dbRepo := dbRepository.NewDatabaseRepository(db)
+	dbServ := dbService.NewDatabaseService(dbRepo)
 
 	repo := repository.NewRepository(db, telegram, cfg.Nessus.AccessKey, cfg.Nessus.SecretKey, cfg.Nessus.URL)
 	serv := service.NewService(repo)

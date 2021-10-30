@@ -12,11 +12,11 @@ import (
 )
 
 func (c *App) AddTargetToNmapScan(target string, id int) error {
-	t, err := c.serv.RetrieveNmapRecord(target, id)
+	t, err := c.storage.RetrieveNmapRecord(target, id)
 
 	if err == sql.ErrNoRows {
 		log.Printf("No records found for %s", target)
-		t, err := c.serv.CreateNewNmapTarget(target, id)
+		t, err := c.storage.CreateNewNmapTarget(target, id)
 		if err != nil {
 			log.Printf("Could not add target %s to the table. Error: %s", target, err)
 			return err
@@ -27,7 +27,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 			t.ErrMsg = err.Error()
 			t.ErrStatus = -200
 		}
-		c.serv.SaveNmapResult(t)
+		c.storage.SaveNmapResult(t)
 
 		return nil
 	} else if err == nil {
@@ -39,7 +39,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 				t.ErrMsg = err.Error()
 				t.ErrStatus = -200
 			}
-			c.serv.SaveNmapResult(t)
+			c.storage.SaveNmapResult(t)
 			return nil
 		}
 
@@ -57,7 +57,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 
 func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error {
 	// c.serv.SendMessage(fmt.Sprintf("Starting #ALL_PORT scanning %s", target.IP))
-	ports, err := c.serv.ScanPorts(target.IP)
+	ports, err := c.portScanner.ScanPorts(target.IP)
 	if err != nil {
 		log.Printf("Could not run Port scan on %s. Error: %s", target.IP, err)
 		c.SendMessage(fmt.Sprintf("Could not scan #ALL_PORTS of %s", target.IP))
@@ -80,7 +80,7 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 }
 
 func (c *App) AutonomousPortScanner() {
-	targets, err := c.serv.RetrieveAllNmapTargets()
+	targets, err := c.storage.RetrieveAllNmapTargets()
 	if err != nil {
 		log.Fatalf("Could not obtain all NMAP targets. Error: %s", err)
 	}
@@ -100,7 +100,7 @@ func (c *App) AutonomousPortScanner() {
 					target.ErrMsg = err.Error()
 					target.ErrStatus = -200
 				}
-				if _, err := c.serv.SaveNmapResult(target); err != nil {
+				if _, err := c.storage.SaveNmapResult(target); err != nil {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.IP, err)
 				}
 				log.Printf("Finished NMAP scan of %s", target.IP)

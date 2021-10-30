@@ -12,11 +12,11 @@ import (
 )
 
 func (c *App) AddTargetToWebScan(target string, id int) error {
-	t, err := c.serv.RetrieveWebRecord(target, id)
+	t, err := c.storage.RetrieveWebRecord(target, id)
 
 	if err == sql.ErrNoRows {
 		log.Printf("No records found for %s", target)
-		t, err := c.serv.CreateNewWebTarget(target, id)
+		t, err := c.storage.CreateNewWebTarget(target, id)
 		if err != nil {
 			log.Printf("Could not add target %s to the table. Error: %s", target, err)
 			return err
@@ -27,7 +27,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 			t.ErrMsg = err.Error()
 			t.ErrStatus = -200
 		}
-		c.serv.SaveWebResult(t)
+		c.storage.SaveWebResult(t)
 
 		return nil
 	} else if err == nil {
@@ -39,7 +39,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 				t.ErrMsg = err.Error()
 				t.ErrStatus = -200
 			}
-			c.serv.SaveWebResult(t)
+			c.storage.SaveWebResult(t)
 			return nil
 		}
 
@@ -57,7 +57,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 
 func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) error {
 	// c.serv.SendMessage(fmt.Sprintf("Starting #WEB_PORT scanning %s", target.IP))
-	ports, err := c.serv.ScanWebPorts(target.IP)
+	ports, err := c.portScanner.ScanWebPorts(target.IP)
 	if err != nil {
 		log.Printf("Could not run Web Port scan on %s. Error: %s", target.IP, err)
 		c.SendMessage(fmt.Sprintf("Could not scan Web_PORTS of %s", target.IP))
@@ -80,7 +80,7 @@ func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) 
 }
 
 func (c *App) AutonomousWebPortScanner() {
-	targets, err := c.serv.RetrieveAllWebTargets()
+	targets, err := c.storage.RetrieveAllWebTargets()
 	if err != nil {
 		log.Fatalf("Could not obtain all NMAP web targets. Error: %s", err)
 	}
@@ -96,7 +96,7 @@ func (c *App) AutonomousWebPortScanner() {
 				var lastResult string
 				log.Printf("Doing NMAP Web scan of %s", target.IP)
 
-				oldTarget, err := c.serv.RetrieveWebRecord(target.IP, target.ARPscanID)
+				oldTarget, err := c.storage.RetrieveWebRecord(target.IP, target.ARPscanID)
 				if err != nil {
 					log.Printf("Could not obtain old web record. Error: %s", err)
 					log.Printf("IP: %s. ID: %d", target.IP, target.ID)
@@ -109,7 +109,7 @@ func (c *App) AutonomousWebPortScanner() {
 					target.ErrMsg = err.Error()
 					target.ErrStatus = -200
 				}
-				if _, err := c.serv.SaveWebResult(target); err != nil {
+				if _, err := c.storage.SaveWebResult(target); err != nil {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.IP, err)
 				}
 				log.Printf("Finished NMAP Web scan of %s", target.IP)

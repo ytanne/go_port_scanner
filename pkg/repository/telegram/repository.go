@@ -1,4 +1,4 @@
-package tg
+package telegram
 
 import (
 	"log"
@@ -7,34 +7,38 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-const (
-	NoUpdates = "No updates from bot"
-)
+type Communicator interface {
+	SendMessage(msg string) error
+	ReadMessage(msg chan string) error
+}
 
-type Telegram struct {
+type tgCommunicate struct {
 	Bot       *tgbotapi.BotAPI
 	TGconfigs *tgbotapi.UpdateConfig
 	GroupID   int64
 }
 
-func NewTelegramConn(APItoken string, GroupID int64) (*Telegram, error) {
+func NewCommunicatorRepository(APItoken string, tgc *tgbotapi.UpdateConfig, gi int64) (Communicator, error) {
 	log.Printf("Obtained API token: %s", APItoken)
-	log.Printf("Group ID: %d", GroupID)
+	log.Printf("Group ID: %d", gi)
 	bot, err := tgbotapi.NewBotAPI(APItoken)
 	if err != nil {
 		return nil, err
 	}
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-
-	return &Telegram{
-		Bot:       bot,
-		TGconfigs: &u,
-		GroupID:   GroupID,
-	}, nil
+	return &tgCommunicate{bot, tgc, gi}, nil
 }
 
-func (t *Telegram) SendMessage(msg string) error {
+func (r *tgCommunicate) ReadMessage(msg chan string) error {
+	return r.readMessages(msg)
+}
+
+func (r *tgCommunicate) SendMessage(msg string) error {
+	return r.sendMessage(msg)
+}
+
+func (t *tgCommunicate) sendMessage(msg string) error {
 	reply := tgbotapi.NewMessage(t.GroupID, msg)
 	_, err := t.Bot.Send(reply)
 	if err != nil {
@@ -43,7 +47,7 @@ func (t *Telegram) SendMessage(msg string) error {
 	return err
 }
 
-func (t *Telegram) ReadMessages(msg chan string) error {
+func (t *tgCommunicate) readMessages(msg chan string) error {
 	updates, err := t.Bot.GetUpdatesChan(*t.TGconfigs)
 	if err != nil {
 		return err
