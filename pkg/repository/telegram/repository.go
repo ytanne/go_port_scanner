@@ -18,7 +18,7 @@ type tgCommunicate struct {
 	GroupID   int64
 }
 
-func NewCommunicatorRepository(APItoken string, tgc *tgbotapi.UpdateConfig, gi int64) (Communicator, error) {
+func NewCommunicatorRepository(APItoken string, gi int64) (Communicator, error) {
 	log.Printf("Obtained API token: %s", APItoken)
 	log.Printf("Group ID: %d", gi)
 	bot, err := tgbotapi.NewBotAPI(APItoken)
@@ -27,7 +27,7 @@ func NewCommunicatorRepository(APItoken string, tgc *tgbotapi.UpdateConfig, gi i
 	}
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	return &tgCommunicate{bot, tgc, gi}, nil
+	return &tgCommunicate{bot, &u, gi}, nil
 }
 
 func (r *tgCommunicate) ReadMessage(msg chan string) error {

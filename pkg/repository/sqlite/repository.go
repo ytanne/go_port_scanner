@@ -3,9 +3,11 @@ package sqlite
 import (
 	"database/sql"
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"time"
 
+	"github.com/ytanne/go_nessus/pkg/config"
 	"github.com/ytanne/go_nessus/pkg/entities"
 )
 
@@ -31,8 +33,21 @@ type database struct {
 	db *sql.DB
 }
 
-func NewDatabaseRepository(db *sql.DB) DBKeeper {
-	return &database{db}
+func NewDatabaseRepository(cfg *config.Config) (DBKeeper, error) {
+	initSQL, err := ioutil.ReadFile(cfg.DB.InitSQL)
+	if err != nil {
+		return nil, err
+	}
+	db, err := sql.Open(cfg.DB.Type, cfg.DB.Path)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	if _, err := db.Exec(string(initSQL)); err != nil {
+		return nil, err
+	}
+
+	return &database{db}, nil
 }
 
 func (d *database) CreateNewARPTarget(target string) (*entities.ARPTarget, error) {

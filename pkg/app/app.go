@@ -57,6 +57,7 @@ func (c *App) Run() error {
 	go c.AutonomousPortScanner()
 	go c.AutonomousWebPortScanner()
 
+	log.Println("Starting application")
 	var cmd string
 	for {
 		select {

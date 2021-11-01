@@ -1,46 +1,38 @@
 package main
 
 import (
-	"database/sql"
-	"io/ioutil"
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ytanne/go_nessus/pkg/app"
 	"github.com/ytanne/go_nessus/pkg/config"
+	nmapRepository "github.com/ytanne/go_nessus/pkg/repository/nmap"
 	dbRepository "github.com/ytanne/go_nessus/pkg/repository/sqlite"
-	"github.com/ytanne/go_nessus/pkg/service"
+	tgRepository "github.com/ytanne/go_nessus/pkg/repository/telegram"
+	nmapService "github.com/ytanne/go_nessus/pkg/service/nmap"
 	dbService "github.com/ytanne/go_nessus/pkg/service/sqlite"
-	"github.com/ytanne/go_nessus/pkg/tg"
+	tgService "github.com/ytanne/go_nessus/pkg/service/telegram"
 )
 
 func main() {
 	cfg := config.InitConfig("./assets/config.yaml")
 
-	telegram, err := tg.NewTelegramConn(cfg.Telegram.APItoken, cfg.Telegram.ChatID)
+	dbRepo, err := dbRepository.NewDatabaseRepository(cfg)
 	if err != nil {
-		log.Fatalf("Could not initialize telegram bot. Error: %s", err)
+		log.Fatalln(err)
 	}
-
-	initSQL, err := ioutil.ReadFile(cfg.DB.InitSQL)
-	if err != nil {
-		log.Fatalf("Could not read file from %s to initialize DB. Error: %s", cfg.DB.InitSQL, err)
-	}
-	db, err := sql.Open(cfg.DB.Type, cfg.DB.Path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	if _, err := db.Exec(string(initSQL)); err != nil {
-		log.Fatal(err)
-	}
-
-	dbRepo := dbRepository.NewDatabaseRepository(db)
 	dbServ := dbService.NewDatabaseService(dbRepo)
 
-	repo := repository.NewRepository(db, telegram, cfg.Nessus.AccessKey, cfg.Nessus.SecretKey, cfg.Nessus.URL)
-	serv := service.NewService(repo)
-	a := app.NewApp(serv)
+	nmapRepo := nmapRepository.NewScannerRepository()
+	nmapServ := nmapService.NewNmapService(nmapRepo)
+
+	tgRepo, err := tgRepository.NewCommunicatorRepository(cfg.Telegram.APItoken, cfg.Telegram.ChatID)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	tgServ := tgService.NewCommunicatorService(tgRepo)
+
+	a := app.NewApp(tgServ, dbServ, nmapServ)
 
 	if err := a.Run(); err != nil {
 		log.Fatalf("Error occured. Exiting...")
