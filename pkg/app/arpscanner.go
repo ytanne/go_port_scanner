@@ -6,7 +6,6 @@ import (
 	"log"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -98,14 +97,13 @@ func (c *App) AutonomousARPScanner() {
 	if err != nil {
 		log.Fatalf("Could not obtain all ARP targets: %s", err)
 	}
-	var wg sync.WaitGroup
+	sem := make(chan struct{}, 2)
 	for {
 		log.Println("Starting autonomous ARP check")
 		log.Printf("There are %d targets for ARP scan", len(targets))
-		l := len(targets)
-		for i, target := range targets {
-			wg.Add(1)
-			go func(target *entities.ARPTarget) {
+		for _, target := range targets {
+			sem <- struct{}{}
+			go func(target *entities.ARPTarget, sem <-chan struct{}) {
 				lastResult := target.IPs
 				err = c.RunARPScanner(target, lastResult)
 				if err != nil {
@@ -116,14 +114,10 @@ func (c *App) AutonomousARPScanner() {
 				if _, err := c.storage.SaveARPResult(target); err != nil {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.Target, err)
 				}
-				wg.Done()
-			}(target)
-			if (i+1)%2 == 0 || (i+1) == l {
-				wg.Wait()
-			}
+				<-sem
+			}(target, sem)
 		}
 		log.Println("Finished autonomous ARP check. Taking a break")
-		time.Sleep(5 * time.Minute)
 	}
 }
 

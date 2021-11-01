@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -84,14 +83,14 @@ func (c *App) AutonomousPortScanner() {
 	if err != nil {
 		log.Fatalf("Could not obtain all NMAP targets. Error: %s", err)
 	}
-	var wg sync.WaitGroup
+	sem := make(chan struct{}, 3)
 	var l int = len(targets)
 	for {
 		log.Println("Starting autonomous NMAP check")
 		log.Printf("There are %d targets for NMAP scan", l)
-		for i, target := range targets {
-			wg.Add(1)
-			go func(target *entities.NmapTarget) {
+		for _, target := range targets {
+			sem <- struct{}{}
+			go func(target *entities.NmapTarget, sem <-chan struct{}) {
 				log.Printf("Doing NMAP scan of %s", target.IP)
 				lastResult := len(target.Result)
 				err = c.RunPortScanner(target, lastResult)
@@ -104,13 +103,9 @@ func (c *App) AutonomousPortScanner() {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.IP, err)
 				}
 				log.Printf("Finished NMAP scan of %s", target.IP)
-				wg.Done()
-			}(target)
-			if (i+1)%3 == 0 || (i+1) == l {
-				wg.Wait()
-			}
+				<-sem
+			}(target, sem)
 		}
 		log.Println("Finished autonomous NMAP check. Taking a break")
-		time.Sleep(time.Minute * 5)
 	}
 }
