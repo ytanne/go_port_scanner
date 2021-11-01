@@ -21,7 +21,11 @@ type App struct {
 }
 
 func NewApp(communicator telegram.Communicator, storage sqlite.DBKeeper, portScanner nmap.NmapScanner) *App {
-	return &App{communicator, storage, portScanner}
+	return &App{
+		communicator: communicator,
+		storage:      storage,
+		portScanner:  portScanner,
+	}
 }
 
 func (c *App) SendMessage(msg string) {
