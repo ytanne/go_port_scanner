@@ -44,7 +44,7 @@ func NewDatabaseRepository(cfg *config.Config) (DBKeeper, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+
 	if _, err := db.Exec(string(initSQL)); err != nil {
 		return nil, err
 	}
@@ -113,7 +113,11 @@ func (d *database) RetrieveOldARPTargets(timelimit int) ([]*entities.ARPTarget, 
 	var IPs []byte
 	for rows.Next() {
 		element := new(entities.ARPTarget)
-		rows.Scan(&element.ID, &element.Target, &element.NumOfIPs, &IPs, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		err := rows.Scan(&element.ID, &element.Target, &element.NumOfIPs, &IPs, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		if err != nil {
+			log.Printf("Could not scan ARP results. Error: %s", err)
+			continue
+		}
 		if err := json.Unmarshal(IPs, &element.IPs); err != nil {
 			log.Printf("Could not unmarshal IPs of %s", element.Target)
 		}
@@ -136,7 +140,11 @@ func (d *database) RetrieveAllARPTargets() ([]*entities.ARPTarget, error) {
 	var IPs []byte
 	for rows.Next() {
 		element := new(entities.ARPTarget)
-		rows.Scan(&element.ID, &element.Target, &element.NumOfIPs, &IPs, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		err := rows.Scan(&element.ID, &element.Target, &element.NumOfIPs, &IPs, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		if err != nil {
+			log.Printf("Could not scan ARP targets. Error: %s", err)
+			continue
+		}
 		if err := json.Unmarshal(IPs, &element.IPs); err != nil {
 			log.Printf("Could not unmarshal IPs of %s", element.Target)
 		}
@@ -192,7 +200,11 @@ func (d *database) RetrieveOldNmapTargets(timelimit int) ([]*entities.NmapTarget
 
 	for rows.Next() {
 		element := new(entities.NmapTarget)
-		rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		err := rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		if err != nil {
+			log.Printf("Could not scan old nmap targets. Error: %s", err)
+			continue
+		}
 		result = append(result, element)
 	}
 	return result, nil
@@ -211,7 +223,11 @@ func (d *database) RetrieveAllNmapTargets() ([]*entities.NmapTarget, error) {
 
 	for rows.Next() {
 		element := new(entities.NmapTarget)
-		rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		err := rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		if err != nil {
+			log.Printf("Could not scan all nmap targets. Error: %s", err)
+			continue
+		}
 		result = append(result, element)
 	}
 	return result, nil
@@ -261,7 +277,11 @@ func (d *database) RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget,
 
 	for rows.Next() {
 		element := new(entities.NmapTarget)
-		rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		err := rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		if err != nil {
+			log.Printf("Could not scan old web targets. Error: %s", err)
+			continue
+		}
 		result = append(result, element)
 	}
 	return result, nil
@@ -280,7 +300,11 @@ func (d *database) RetrieveAllWebTargets() ([]*entities.NmapTarget, error) {
 
 	for rows.Next() {
 		element := new(entities.NmapTarget)
-		rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		err := rows.Scan(&element.ID, &element.ARPscanID, &element.IP, &element.Result, &element.ScanTime, &element.ErrStatus, &element.ErrMsg)
+		if err != nil {
+			log.Printf("Could not scan all web s. Error: %s", err)
+			continue
+		}
 		result = append(result, element)
 	}
 	return result, nil

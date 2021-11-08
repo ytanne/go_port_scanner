@@ -26,11 +26,13 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 			t.ErrMsg = err.Error()
 			t.ErrStatus = -200
 		}
-		c.storage.SaveWebResult(t)
+		if _, err := c.storage.SaveWebResult(t); err != nil {
+			log.Println("Storing web result failed:", err)
+		}
 
 		return nil
 	} else if err == nil {
-		if time.Now().Sub(t.ScanTime) > time.Minute*5 {
+		if time.Since(t.ScanTime) > time.Minute*5 {
 			lastResult := t.Result
 			err = c.RunWebPortScanner(t, lastResult)
 			if err != nil {
@@ -38,16 +40,23 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 				t.ErrMsg = err.Error()
 				t.ErrStatus = -200
 			}
-			c.storage.SaveWebResult(t)
+			if _, err := c.storage.SaveWebResult(t); err != nil {
+				log.Println("Storing web result failed:", err)
+			}
 			return nil
 		}
 
 		if t.ErrStatus == -200 {
-			c.SendMessage(fmt.Sprintf("Could not do #WEB_PORT scan %s\n%s", t.IP, t.ErrMsg))
+			c.SendMessage(fmt.Sprintf("Could not do #WEB_PORT scan %s\n%s", t.IP, t.ErrMsg), c.wpsChannelID)
 			return nil
 		}
-
-		c.SendMessage(fmt.Sprintf("%s\nPreviously at #WEB_PORT scan of %s was found:\n%s", t.IP, t.ScanTime.Format(time.RFC3339), t.Result))
+		msg := fmt.Sprintf(
+			"%s\nPreviously at #WEB_PORT scan of %s was found:\n%s",
+			t.IP,
+			t.ScanTime.Format(time.RFC3339),
+			t.Result,
+		)
+		c.SendMessage(msg, c.wpsChannelID)
 		return nil
 	}
 	log.Printf("Could not retrieve web results for %s. Error: %s", target, err)
@@ -59,21 +68,26 @@ func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) 
 	ports, err := c.portScanner.ScanWebPorts(target.IP)
 	if err != nil {
 		log.Printf("Could not run Web Port scan on %s. Error: %s", target.IP, err)
-		c.SendMessage(fmt.Sprintf("Could not scan Web_PORTS of %s", target.IP))
+		c.SendMessage(fmt.Sprintf("Could not scan Web_PORTS of %s", target.IP), c.wpsChannelID)
 		target.ErrMsg = err.Error()
 		target.ErrStatus = -200
 		return err
 	}
 	if ports == nil {
 		log.Printf("No web ports found for %s", target.IP)
-		c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP))
+		c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP), c.wpsChannelID)
 		return nil
 	}
 	target.Result = strings.Join(ports, "; ")
 	if lastResult != target.Result {
-		c.SendMessage(fmt.Sprintf("Open #WEB_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n")))
+		msg := fmt.Sprintf(
+			"Open #WEB_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s",
+			target.IP,
+			strings.Join(ports, "\n"),
+		)
+		c.SendMessage(msg, c.wpsChannelID)
 	} else {
-		c.SendMessage(fmt.Sprintf("No updates on #WEB_PORTS for %s", target.IP))
+		c.SendMessage(fmt.Sprintf("No updates on #WEB_PORTS for %s", target.IP), c.wpsChannelID)
 	}
 	return nil
 }
@@ -84,7 +98,8 @@ func (c *App) AutonomousWebPortScanner() {
 		log.Fatalf("Could not obtain all NMAP web targets. Error: %s", err)
 	}
 	sem := make(chan struct{}, 5)
-	for {
+	ticker := time.Tick(time.Minute * 15)
+	for range ticker {
 		log.Println("Starting autonomous NMAP Web check")
 		log.Printf("There are %d targets for NMAP Web scan", len(targets))
 		for _, target := range targets {

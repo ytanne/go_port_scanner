@@ -9,18 +9,22 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ytanne/go_nessus/pkg/models"
+	"github.com/ytanne/go_nessus/pkg/repository/discord"
 	"github.com/ytanne/go_nessus/pkg/service/nmap"
 	"github.com/ytanne/go_nessus/pkg/service/sqlite"
-	"github.com/ytanne/go_nessus/pkg/service/telegram"
 )
 
 type App struct {
-	communicator telegram.Communicator
+	communicator discord.Communicator
 	storage      sqlite.DBKeeper
 	portScanner  nmap.NmapScanner
+	arpChannelID string
+	psChannelID  string
+	wpsChannelID string
 }
 
-func NewApp(communicator telegram.Communicator, storage sqlite.DBKeeper, portScanner nmap.NmapScanner) *App {
+func NewApp(communicator discord.Communicator, storage sqlite.DBKeeper, portScanner nmap.NmapScanner) *App {
 	return &App{
 		communicator: communicator,
 		storage:      storage,
@@ -28,16 +32,19 @@ func NewApp(communicator telegram.Communicator, storage sqlite.DBKeeper, portSca
 	}
 }
 
-func (c *App) SendMessage(msg string) {
-	if err := c.communicator.SendMessage(msg); err != nil {
+func (c *App) SendMessage(msg, channelID string) {
+	if channelID == "" {
+		log.Println("Empty channel ID obtained. Could not send message: ", msg)
+	}
+	if err := c.communicator.SendMessage(msg, channelID); err != nil {
 		log.Printf("Could not send message. Error: %s", err)
 		if strings.Contains(err.Error(), "message is too long") {
 			l := len(msg) / 2
-			c.SendMessage(msg[:l])
-			c.SendMessage(msg[l:])
+			c.SendMessage(msg[:l], channelID)
+			c.SendMessage(msg[l:], channelID)
 		} else if strings.Contains(err.Error(), "Too Many Requests") {
 			time.Sleep(time.Second * 45)
-			c.SendMessage(msg)
+			c.SendMessage(msg, channelID)
 		}
 	}
 }
@@ -48,35 +55,28 @@ func (c *App) Run() error {
 	worker := make(chan struct{}, workerLimit)
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
-	msgs := make(chan string, 3)
-
-	go func() {
-		err := c.communicator.ReadMessage(msgs)
-		if err != nil {
-			log.Printf("Could not read message from the bot. Error: %s", err)
-		}
-	}()
+	msgs := discord.DiscordChannel
 
 	go c.AutonomousARPScanner()
 	go c.AutonomousPortScanner()
 	go c.AutonomousWebPortScanner()
 
 	log.Println("Starting application")
-	var cmd string
+	var m models.Message
 	for {
 		select {
-		case cmd = <-msgs:
-			log.Printf("Obtained command - %s", cmd)
+		case m = <-msgs:
+			log.Printf("Obtained command - %s from %s", m.Msg, m.ChannelID)
 			log.Printf("# of free workers - %d", workerLimit-workerCounter)
-			if strings.HasPrefix(cmd, "/") {
+			if strings.HasPrefix(m.Msg, "/") {
 				if workerCounter < workerLimit {
 					workerCounter++
 					go func(worker chan struct{}) {
-						c.runCommand(cmd)
+						c.runCommand(m.Msg, m.ChannelID)
 						worker <- struct{}{}
 					}(worker)
 				} else {
-					c.SendMessage("I'm too busy already. Try to scan later")
+					c.SendMessage("I'm too busy already. Try to scan later", m.ChannelID)
 				}
 			}
 		case <-s:
@@ -90,24 +90,74 @@ func (c *App) Run() error {
 	}
 }
 
-func (c *App) runCommand(cmd string) {
+func (c *App) runCommand(cmd, channelID string) {
 	words := strings.Fields(cmd)
 	if len(words) <= 1 {
-		if err := c.communicator.SendMessage("Not enough arguments"); err != nil {
+		if len(words) == 1 {
+			c.singleCommandRun(words[0], channelID)
+			return
+		}
+		if err := c.communicator.SendMessage("Not enough arguments", channelID); err != nil {
 			log.Printf("Could not send message. Error: %s", err)
 		}
 		return
 	}
 	switch words[0] {
+	case "/arp_channel_id":
+		c.arpChannelID = words[1]
+		msg := fmt.Sprintf("ARP channel ID is set to %s", c.arpChannelID)
+		if err := c.communicator.SendMessage(msg, channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
+	case "/ps_channel_id":
+		c.psChannelID = words[1]
+		msg := fmt.Sprintf("PS channel ID is set to %s", c.psChannelID)
+		if err := c.communicator.SendMessage(msg, channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
+	case "/wps_channel_id":
+		c.wpsChannelID = words[1]
+		msg := fmt.Sprintf("WPS channel ID is set to %s", c.wpsChannelID)
+		if err := c.communicator.SendMessage(msg, channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
 	case "/reply":
-		if err := c.communicator.SendMessage(words[1]); err != nil {
+		if err := c.communicator.SendMessage(words[1], channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
 	case "/nmap":
-		c.AddTargetToNmapScan(words[1], -1)
+		if err := c.AddTargetToNmapScan(words[1], -1); err != nil {
+			log.Println("Adding target to nmap scan failed:", err)
+		}
 	case "/web_nmap":
-		c.AddTargetToWebScan(words[1], -1)
+		if err := c.AddTargetToWebScan(words[1], -1); err != nil {
+			log.Println("Adding target to web scan failed:", err)
+		}
 	case "/arpscan":
-		c.AddTargetToARPScan(words[1])
+		if err := c.AddTargetToARPScan(words[1]); err != nil {
+			log.Println("Adding target to arp scan failed:", err)
+		}
+	}
+}
+
+const helpMessage string = `
+/get_this_channel_id -> obtains the channel ID where the command is executed
+/arp_channel_id -> setting channel ID to send ARP scan results into that channel
+/ps_channel_id -> setting channel ID to send all ports scan results into that channel
+/wps_channel_id -> setting channel ID to send web ports scan results into that channel
+/arpscan -> settings ARP scan target. Accepts both single IP and IP with bitmask
+/nmap -> setting all ports scan target. Accepts both single IP and IP with bitmask
+/web_nmap -> setting web ports scan target. Accepts both single IP and IP with bitmask
+`
+
+func (c *App) singleCommandRun(cmd, channelID string) {
+	switch cmd {
+	case "/help":
+		c.communicator.SendMessage(helpMessage, channelID)
+	case "/get_this_channel_id":
+		msg := fmt.Sprintf("This channel ID is %s", channelID)
+		if err := c.communicator.SendMessage(msg, channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
 	}
 }

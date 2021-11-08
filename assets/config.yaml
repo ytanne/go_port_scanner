@@ -1,6 +1,3 @@
-telegram:
-  api_token: 1258815235:AAHabDcwDpSULOoCF7Kc-WYh-rlTxlKGYfo
-  chat_id: -1001552306035
 db:
   init_sql: "./assets/init.sql"
   alter_sql: "./assets/alter.sql"

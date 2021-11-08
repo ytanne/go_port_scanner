@@ -1,2 +1,4 @@
 assets/*
 cache/*
+docker-compose.yaml
+.env

@@ -3,6 +3,7 @@ package config
 import (
 	"io/ioutil"
 	"log"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -23,6 +24,9 @@ type Config struct {
 		InitSQL  string `yaml:"init_sql"`
 		AlterSQL string `yaml:"alter_sql"`
 	} `yaml:"db"`
+	Discord struct {
+		Token string `yaml:"token"`
+	} `yaml:"discord"`
 }
 
 func InitConfig(filepath string) *Config {
@@ -34,6 +38,8 @@ func InitConfig(filepath string) *Config {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		log.Fatalf("Could not unmarshal %s. Error: %s", filepath, err)
 	}
-	log.Println(cfg.Telegram.APItoken)
+	if cfg.Discord.Token = os.Getenv("DISCORD_BOT"); cfg.Discord.Token == "" {
+		log.Fatalf("Could not obtain discord token")
+	}
 	return &cfg
 }

@@ -26,19 +26,27 @@ func (c *App) AddTargetToARPScan(target string) error {
 			t.ErrMsg = err.Error()
 			t.ErrStatus = -200
 		}
-		c.storage.SaveARPResult(t)
+		if _, err := c.storage.SaveARPResult(t); err != nil {
+			log.Println("Storing ARP result failed:", err)
+		}
 
 		log.Printf("Target ID - %d", t.ID)
 		go func() {
 			for _, ip := range t.IPs {
-				c.storage.CreateNewNmapTarget(ip, t.ID)
-				c.storage.CreateNewWebTarget(ip, t.ID)
+				_, err := c.storage.CreateNewNmapTarget(ip, t.ID)
+				if err != nil {
+					log.Println("Creating new nmap target failed")
+				}
+				_, err = c.storage.CreateNewWebTarget(ip, t.ID)
+				if err != nil {
+					log.Println("Creating new web target failed")
+				}
 			}
 		}()
 
 		return nil
 	} else if err == nil {
-		if time.Now().Sub(t.ScanTime) > time.Minute*5 {
+		if time.Since(t.ScanTime) > time.Minute*5 {
 			lastResult := t.IPs
 			err = c.RunARPScanner(t, lastResult)
 			if err != nil {
@@ -46,16 +54,24 @@ func (c *App) AddTargetToARPScan(target string) error {
 				t.ErrMsg = err.Error()
 				t.ErrStatus = -200
 			}
-			c.storage.SaveARPResult(t)
+			if _, err := c.storage.SaveARPResult(t); err != nil {
+				log.Println("Storing ARP result failed:", err)
+			}
 			return nil
 		}
 
 		if t.ErrStatus == -200 {
-			c.SendMessage(fmt.Sprintf("Could not ARP scan of %s\n%s", t.Target, t.ErrMsg))
+			c.SendMessage(fmt.Sprintf("Could not ARP scan of %s\n%s", t.Target, t.ErrMsg), c.arpChannelID)
 			return nil
 		}
-
-		c.SendMessage(fmt.Sprintf("Previously at ARP scan of %s was found %d IPs in %s\n%s", t.ScanTime.Format(time.RFC3339), t.NumOfIPs, t.Target, strings.Join(t.IPs, "\n")))
+		msg := fmt.Sprintf(
+			"Previously at ARP scan of %s was found %d IPs in %s\n%s",
+			t.ScanTime.Format(time.RFC3339),
+			t.NumOfIPs,
+			t.Target,
+			strings.Join(t.IPs, "\n"),
+		)
+		c.SendMessage(msg, c.arpChannelID)
 		return nil
 	}
 	log.Printf("Could not retrieve records for %s. Error: %s", target, err)
@@ -66,11 +82,11 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 	// c.serv.SendMessage(fmt.Sprintf("Starting ARP scanning %s", target.Target))
 	ips, err := c.portScanner.ScanNetwork(target.Target)
 	if err != nil {
-		c.SendMessage(fmt.Sprintf("Could not do ARP scan network of %s", target.Target))
+		c.SendMessage(fmt.Sprintf("Could not do ARP scan network of %s", target.Target), c.arpChannelID)
 		return err
 	}
 	if ips == nil {
-		c.SendMessage(fmt.Sprintf("No IPs of %s found in ARP scan", target.Target))
+		c.SendMessage(fmt.Sprintf("No IPs of %s found in ARP scan", target.Target), c.arpChannelID)
 		return nil
 	}
 	sort.Strings(ips)
@@ -80,12 +96,24 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 		if lastResult == nil {
 			log.Printf("Last result for %s is nil", target.Target)
 		} else if len(lastResult) > len(ips) {
-			c.SendMessage(fmt.Sprintf("ARP scan of %s:\n%s\nNo more available:\n%s", target.Target, strings.Join(ips, "\n"), strings.Join(diff, "\n")))
+			msg := fmt.Sprintf(
+				"ARP scan of %s:\n%s\nNo more available:\n%s",
+				target.Target,
+				strings.Join(ips, "\n"),
+				strings.Join(diff, "\n"),
+			)
+			c.SendMessage(msg, c.arpChannelID)
 		} else {
-			c.SendMessage(fmt.Sprintf("ARP scan of %s:\n%s\nNew IPs detected:\n%s", target.Target, strings.Join(lastResult, "\n"), strings.Join(diff, "\n")))
+			msg := fmt.Sprintf(
+				"ARP scan of %s:\n%s\nNew IPs detected:\n%s",
+				target.Target,
+				strings.Join(lastResult, "\n"),
+				strings.Join(diff, "\n"),
+			)
+			c.SendMessage(msg, c.arpChannelID)
 		}
 	} else {
-		c.SendMessage(fmt.Sprintf("No updates for %s on ARP scan", target.Target))
+		c.SendMessage(fmt.Sprintf("No updates for %s on ARP scan", target.Target), c.arpChannelID)
 	}
 	target.NumOfIPs = len(ips)
 	target.IPs = ips
@@ -98,7 +126,8 @@ func (c *App) AutonomousARPScanner() {
 		log.Fatalf("Could not obtain all ARP targets: %s", err)
 	}
 	sem := make(chan struct{}, 2)
-	for {
+	ticker := time.Tick(time.Minute * 15)
+	for range ticker {
 		log.Println("Starting autonomous ARP check")
 		log.Printf("There are %d targets for ARP scan", len(targets))
 		for _, target := range targets {
