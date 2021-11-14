@@ -92,12 +92,18 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 		return nil
 	}
 	sort.Strings(ips)
+	if lastResult == nil {
+		msg := fmt.Sprintf(
+			"ARP scan of %s:\n%s",
+			target.Target,
+			strings.Join(ips, "\n"),
+		)
+		c.SendMessage(msg, c.channelType[m.ARP])
+	}
 	equal := checkIfEqual(lastResult, ips)
-	if lastResult == nil || !equal {
+	if !equal {
 		diff := getDifference(lastResult, ips)
-		if lastResult == nil {
-			log.Printf("Last result for %s is nil", target.Target)
-		} else if len(lastResult) > len(ips) {
+		if len(lastResult) > len(ips) {
 			msg := fmt.Sprintf(
 				"ARP scan of %s. No more available:\n%s",
 				target.Target,
