@@ -62,7 +62,7 @@ func (c *App) SendMessage(msg, channelID string) {
 }
 
 func (c *App) Run() error {
-	var workerLimit int = 3
+	var workerLimit int = 5
 	var workerCounter int
 	worker := make(chan struct{}, workerLimit)
 	s := make(chan os.Signal, 1)
