@@ -40,6 +40,7 @@ func main() {
 	discordServ := discordServ.NewDiscordService(discordRepo)
 
 	a := app.NewApp(discordServ, dbServ, nmapServ)
+	a.SetUpChannels(cfg.Discord.ARPChannelID, cfg.Discord.PSChannelID, cfg.Discord.WPSChannelID)
 
 	if err := a.Run(); err != nil {
 		log.Fatalf("Error occured. Exiting...")
