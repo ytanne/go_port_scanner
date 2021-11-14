@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/bwmarrin/discordgo"
@@ -55,8 +56,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func (d discordBot) SendMessage(msg, channelID string) error {
+	if channelID == "" {
+		return fmt.Errorf("Empty channel ID obtained")
+	}
 	if _, err := d.session.ChannelMessageSend(channelID, msg); err != nil {
-		log.Println("Could not send message to channel", channelID, ". Error:", err)
 		return err
 	}
 	return nil

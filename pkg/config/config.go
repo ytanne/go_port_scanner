@@ -25,8 +25,11 @@ type Config struct {
 		AlterSQL string `yaml:"alter_sql"`
 	} `yaml:"db"`
 	Discord struct {
-		Token string `yaml:"token"`
-	} `yaml:"discord"`
+		Token        string
+		ARPChannelID string
+		PSChannelID  string
+		WPSChannelID string
+	}
 }
 
 func InitConfig(filepath string) *Config {
@@ -40,6 +43,15 @@ func InitConfig(filepath string) *Config {
 	}
 	if cfg.Discord.Token = os.Getenv("DISCORD_BOT"); cfg.Discord.Token == "" {
 		log.Fatalf("Could not obtain discord token")
+	}
+	if cfg.Discord.ARPChannelID = os.Getenv("ARP_CHANNEL_ID"); cfg.Discord.ARPChannelID == "" {
+		log.Println("Could not obtain ARP channel ID")
+	}
+	if cfg.Discord.PSChannelID = os.Getenv("PS_CHANNEL_ID"); cfg.Discord.PSChannelID == "" {
+		log.Println("Could not obtain PS channel ID")
+	}
+	if cfg.Discord.WPSChannelID = os.Getenv("WPS_CHANNEL_ID"); cfg.Discord.WPSChannelID == "" {
+		log.Println("Could not obtain WPS channel ID")
 	}
 	return &cfg
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/ytanne/go_nessus/pkg/entities"
 )
 
-type DBKeeper interface {
+type NMAP interface {
 	CreateNewARPTarget(target string) (*entities.ARPTarget, error)
 	SaveARPResult(target *entities.ARPTarget) (int, error)
 	RetrieveARPRecord(target string) (*entities.ARPTarget, error)
@@ -30,8 +30,12 @@ type DBKeeper interface {
 	RetrieveAllWebTargets() ([]*entities.NmapTarget, error)
 }
 
+type DBKeeper interface {
+	NMAP
+}
+
 type database struct {
-	mu sync.Mutex
+	mu sync.RWMutex
 	db *sql.DB
 }
 
@@ -71,8 +75,8 @@ func (d *database) CreateNewARPTarget(target string) (*entities.ARPTarget, error
 }
 
 func (d *database) RetrieveARPRecord(target string) (*entities.ARPTarget, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	var result entities.ARPTarget
 	var IPs []byte
@@ -100,8 +104,8 @@ func (d *database) SaveARPResult(target *entities.ARPTarget) (int, error) {
 }
 
 func (d *database) RetrieveOldARPTargets(timelimit int) ([]*entities.ARPTarget, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	var result []*entities.ARPTarget
 	rows, err := d.db.Query(`select id, target, num_of_ips, ips, scan_time, error_status, error_msg from arp_targets where round((julianday(datetime('now')) - julianday(scan_time)) * 1440) > $1`, timelimit)
@@ -127,8 +131,8 @@ func (d *database) RetrieveOldARPTargets(timelimit int) ([]*entities.ARPTarget, 
 }
 
 func (d *database) RetrieveAllARPTargets() ([]*entities.ARPTarget, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	var result []*entities.ARPTarget
 	rows, err := d.db.Query(`select id, target, num_of_ips, ips, scan_time, error_status, error_msg from arp_targets`)
@@ -170,8 +174,8 @@ func (d *database) CreateNewNmapTarget(target string, arpId int) (*entities.Nmap
 }
 
 func (d *database) RetrieveNmapRecord(target string, id int) (*entities.NmapTarget, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	var result entities.NmapTarget
 	err := d.db.QueryRow(`SELECT id, arpscan_id, ip, result, scan_time, error_status, error_msg FROM nmap_targets WHERE ip = $1 AND arpscan_id = $2`, target, id).Scan(&result.ID, &result.ARPscanID, &result.IP, &result.Result, &result.ScanTime, &result.ErrStatus, &result.ErrMsg)
@@ -188,8 +192,8 @@ func (d *database) SaveNmapResult(target *entities.NmapTarget) (int, error) {
 }
 
 func (d *database) RetrieveOldNmapTargets(timelimit int) ([]*entities.NmapTarget, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	var result []*entities.NmapTarget
 	rows, err := d.db.Query(`select * from nmap_targets where round((julianday(datetime('now')) - julianday(scan_time)) * 1440) > $1 LIMIT 3`, timelimit)
@@ -211,8 +215,8 @@ func (d *database) RetrieveOldNmapTargets(timelimit int) ([]*entities.NmapTarget
 }
 
 func (d *database) RetrieveAllNmapTargets() ([]*entities.NmapTarget, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	var result []*entities.NmapTarget
 	rows, err := d.db.Query(`select * from nmap_targets`)
@@ -250,8 +254,8 @@ func (d *database) CreateNewWebTarget(target string, arpId int) (*entities.NmapT
 }
 
 func (d *database) RetrieveWebRecord(target string, id int) (*entities.NmapTarget, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	var result entities.NmapTarget
 	err := d.db.QueryRow(`SELECT id, arpscan_id, ip, result, scan_time, error_status, error_msg FROM web_targets WHERE ip = $1 AND arpscan_id = $2`, target, id).Scan(&result.ID, &result.ARPscanID, &result.IP, &result.Result, &result.ScanTime, &result.ErrStatus, &result.ErrMsg)
@@ -268,6 +272,9 @@ func (d *database) SaveWebResult(target *entities.NmapTarget) (int, error) {
 }
 
 func (d *database) RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
 	var result []*entities.NmapTarget
 	rows, err := d.db.Query(`select * from web_targets where round((julianday(datetime('now')) - julianday(scan_time)) * 1440) > $1 LIMIT 3`, timelimit)
 	if err != nil {
@@ -288,8 +295,8 @@ func (d *database) RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget,
 }
 
 func (d *database) RetrieveAllWebTargets() ([]*entities.NmapTarget, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	var result []*entities.NmapTarget
 	rows, err := d.db.Query(`select * from web_targets`)

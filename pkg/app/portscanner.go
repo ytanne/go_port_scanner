@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
+	m "github.com/ytanne/go_nessus/pkg/models"
 )
 
 func (c *App) AddTargetToNmapScan(target string, id int) error {
+	log.Println("Obtained all ports scan target", target)
 	t, err := c.storage.RetrieveNmapRecord(target, id)
 
 	if err == sql.ErrNoRows {
@@ -47,7 +49,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 		}
 
 		if t.ErrStatus == -200 {
-			c.SendMessage(fmt.Sprintf("Could not do #ALL_PORT scan %s\n%s", t.IP, t.ErrMsg), c.psChannelID)
+			c.SendMessage(fmt.Sprintf("Could not do #ALL_PORT scan %s\n%s", t.IP, t.ErrMsg), c.channelType[m.PS])
 			return nil
 		}
 		msg := fmt.Sprintf(
@@ -56,7 +58,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 			t.ScanTime.Format(time.RFC3339),
 			t.Result,
 		)
-		c.SendMessage(msg, c.psChannelID)
+		c.SendMessage(msg, c.channelType[m.PS])
 		return nil
 	}
 	log.Printf("Could not retrieve results for %s. Error: %s", target, err)
@@ -68,21 +70,21 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 	ports, err := c.portScanner.ScanPorts(target.IP)
 	if err != nil {
 		log.Printf("Could not run Port scan on %s. Error: %s", target.IP, err)
-		c.SendMessage(fmt.Sprintf("Could not scan #ALL_PORTS of %s", target.IP), c.psChannelID)
+		c.SendMessage(fmt.Sprintf("Could not scan #ALL_PORTS of %s", target.IP), c.channelType[m.PS])
 		target.ErrMsg = err.Error()
 		target.ErrStatus = -200
 		return err
 	}
 	if ports == nil {
 		log.Printf("No ports found for %s", target.IP)
-		c.SendMessage(fmt.Sprintf("No open #ALL_PORTS of %s found", target.IP), c.psChannelID)
+		c.SendMessage(fmt.Sprintf("No open #ALL_PORTS of %s found", target.IP), c.channelType[m.PS])
 		return nil
 	}
 	if lastResult != len(ports) {
 		msg := fmt.Sprintf("Open #ALL_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n"))
-		c.SendMessage(msg, c.psChannelID)
+		c.SendMessage(msg, c.channelType[m.PS])
 	} else {
-		c.SendMessage(fmt.Sprintf("No updates on #ALL_PORTS for %s", target.IP), c.psChannelID)
+		c.SendMessage(fmt.Sprintf("No updates on #ALL_PORTS for %s", target.IP), c.channelType[m.PS])
 	}
 	target.Result = strings.Join(ports, "; ")
 	return nil
@@ -95,8 +97,8 @@ func (c *App) AutonomousPortScanner() {
 	}
 	sem := make(chan struct{}, 3)
 	var l int = len(targets)
-	ticker := time.Tick(time.Minute * 15)
-	for range ticker {
+	ticker := time.NewTicker(time.Minute * 15)
+	for ; true; <-ticker.C {
 		log.Println("Starting autonomous NMAP check")
 		log.Printf("There are %d targets for NMAP scan", l)
 		for _, target := range targets {

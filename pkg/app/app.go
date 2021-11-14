@@ -19,9 +19,7 @@ type App struct {
 	communicator discord.Communicator
 	storage      sqlite.DBKeeper
 	portScanner  nmap.NmapScanner
-	arpChannelID string
-	psChannelID  string
-	wpsChannelID string
+	channelType  map[int]string
 }
 
 func NewApp(communicator discord.Communicator, storage sqlite.DBKeeper, portScanner nmap.NmapScanner) *App {
@@ -29,12 +27,26 @@ func NewApp(communicator discord.Communicator, storage sqlite.DBKeeper, portScan
 		communicator: communicator,
 		storage:      storage,
 		portScanner:  portScanner,
+		channelType:  make(map[int]string),
+	}
+}
+
+func (c *App) SetUpChannels(arpChannelID, psChannelID, wpsChannelID string) {
+	if arpChannelID != "" {
+		c.channelType[models.ARP] = arpChannelID
+	}
+	if psChannelID != "" {
+		c.channelType[models.PS] = psChannelID
+	}
+	if wpsChannelID != "" {
+		c.channelType[models.WPS] = wpsChannelID
 	}
 }
 
 func (c *App) SendMessage(msg, channelID string) {
 	if channelID == "" {
 		log.Println("Empty channel ID obtained. Could not send message: ", msg)
+		return
 	}
 	if err := c.communicator.SendMessage(msg, channelID); err != nil {
 		log.Printf("Could not send message. Error: %s", err)
@@ -104,20 +116,23 @@ func (c *App) runCommand(cmd, channelID string) {
 	}
 	switch words[0] {
 	case "/arp_channel_id":
-		c.arpChannelID = words[1]
-		msg := fmt.Sprintf("ARP channel ID is set to %s", c.arpChannelID)
+		channelID := words[1]
+		c.channelType[models.ARP] = channelID
+		msg := fmt.Sprintf("ARP channel ID is set to %s", channelID)
 		if err := c.communicator.SendMessage(msg, channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
 	case "/ps_channel_id":
-		c.psChannelID = words[1]
-		msg := fmt.Sprintf("PS channel ID is set to %s", c.psChannelID)
+		channelID := words[1]
+		c.channelType[models.PS] = channelID
+		msg := fmt.Sprintf("PS channel ID is set to %s", channelID)
 		if err := c.communicator.SendMessage(msg, channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
 	case "/wps_channel_id":
-		c.wpsChannelID = words[1]
-		msg := fmt.Sprintf("WPS channel ID is set to %s", c.wpsChannelID)
+		channelID := words[1]
+		c.channelType[models.WPS] = channelID
+		msg := fmt.Sprintf("WPS channel ID is set to %s", channelID)
 		if err := c.communicator.SendMessage(msg, channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
@@ -153,7 +168,9 @@ const helpMessage string = `
 func (c *App) singleCommandRun(cmd, channelID string) {
 	switch cmd {
 	case "/help":
-		c.communicator.SendMessage(helpMessage, channelID)
+		if err := c.communicator.SendMessage(helpMessage, channelID); err != nil {
+			log.Printf("Could not send help message. Error: %s", err)
+		}
 	case "/get_this_channel_id":
 		msg := fmt.Sprintf("This channel ID is %s", channelID)
 		if err := c.communicator.SendMessage(msg, channelID); err != nil {

@@ -3,3 +3,6 @@ Makefile
 .env
 docker-compose.yaml
 README.md
+.gitignore
+.dockerignore
+vendor

@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
+	m "github.com/ytanne/go_nessus/pkg/models"
 )
 
 func (c *App) AddTargetToWebScan(target string, id int) error {
+	log.Println("Obtained web ports scan target", target)
 	t, err := c.storage.RetrieveWebRecord(target, id)
 
 	if err == sql.ErrNoRows {
@@ -47,7 +49,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 		}
 
 		if t.ErrStatus == -200 {
-			c.SendMessage(fmt.Sprintf("Could not do #WEB_PORT scan %s\n%s", t.IP, t.ErrMsg), c.wpsChannelID)
+			c.SendMessage(fmt.Sprintf("Could not do #WEB_PORT scan %s\n%s", t.IP, t.ErrMsg), c.channelType[m.WPS])
 			return nil
 		}
 		msg := fmt.Sprintf(
@@ -56,7 +58,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 			t.ScanTime.Format(time.RFC3339),
 			t.Result,
 		)
-		c.SendMessage(msg, c.wpsChannelID)
+		c.SendMessage(msg, c.channelType[m.WPS])
 		return nil
 	}
 	log.Printf("Could not retrieve web results for %s. Error: %s", target, err)
@@ -68,14 +70,14 @@ func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) 
 	ports, err := c.portScanner.ScanWebPorts(target.IP)
 	if err != nil {
 		log.Printf("Could not run Web Port scan on %s. Error: %s", target.IP, err)
-		c.SendMessage(fmt.Sprintf("Could not scan Web_PORTS of %s", target.IP), c.wpsChannelID)
+		c.SendMessage(fmt.Sprintf("Could not scan Web_PORTS of %s", target.IP), c.channelType[m.WPS])
 		target.ErrMsg = err.Error()
 		target.ErrStatus = -200
 		return err
 	}
 	if ports == nil {
 		log.Printf("No web ports found for %s", target.IP)
-		c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP), c.wpsChannelID)
+		c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP), c.channelType[m.WPS])
 		return nil
 	}
 	target.Result = strings.Join(ports, "; ")
@@ -85,9 +87,9 @@ func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) 
 			target.IP,
 			strings.Join(ports, "\n"),
 		)
-		c.SendMessage(msg, c.wpsChannelID)
+		c.SendMessage(msg, c.channelType[m.WPS])
 	} else {
-		c.SendMessage(fmt.Sprintf("No updates on #WEB_PORTS for %s", target.IP), c.wpsChannelID)
+		c.SendMessage(fmt.Sprintf("No updates on #WEB_PORTS for %s", target.IP), c.channelType[m.WPS])
 	}
 	return nil
 }
@@ -98,8 +100,8 @@ func (c *App) AutonomousWebPortScanner() {
 		log.Fatalf("Could not obtain all NMAP web targets. Error: %s", err)
 	}
 	sem := make(chan struct{}, 5)
-	ticker := time.Tick(time.Minute * 15)
-	for range ticker {
+	ticker := time.NewTicker(time.Minute * 15)
+	for ; true; <-ticker.C {
 		log.Println("Starting autonomous NMAP Web check")
 		log.Printf("There are %d targets for NMAP Web scan", len(targets))
 		for _, target := range targets {

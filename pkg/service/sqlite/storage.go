@@ -5,7 +5,7 @@ import (
 	"github.com/ytanne/go_nessus/pkg/repository/sqlite"
 )
 
-type DBKeeper interface {
+type NMAP interface {
 	CreateNewARPTarget(target string) (*entities.ARPTarget, error)
 	SaveARPResult(target *entities.ARPTarget) (int, error)
 	RetrieveARPRecord(target string) (*entities.ARPTarget, error)
@@ -21,6 +21,10 @@ type DBKeeper interface {
 	RetrieveWebRecord(target string, id int) (*entities.NmapTarget, error)
 	RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget, error)
 	RetrieveAllWebTargets() ([]*entities.NmapTarget, error)
+}
+
+type DBKeeper interface {
+	NMAP
 }
 
 type serviceStorage struct {
