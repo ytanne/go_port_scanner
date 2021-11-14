@@ -34,7 +34,7 @@ func getIPs(target string) ([]byte, error) {
 }
 
 func getPorts(address string) ([]byte, error) {
-	return exec.Command("nmap", "--top-ports", "10000", "-T3", address).Output()
+	return exec.Command("nmap", "--top-ports", "1000", "-T3", address).Output()
 }
 
 func getWebPorts(address string) ([]byte, error) {
