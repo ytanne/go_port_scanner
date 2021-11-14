@@ -95,14 +95,14 @@ func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) 
 }
 
 func (c *App) AutonomousWebPortScanner() {
-	targets, err := c.storage.RetrieveAllWebTargets()
-	if err != nil {
-		log.Fatalf("Could not obtain all NMAP web targets. Error: %s", err)
-	}
 	sem := make(chan struct{}, 5)
 	ticker := time.NewTicker(time.Minute * 15)
 	for ; true; <-ticker.C {
 		log.Println("Starting autonomous NMAP Web check")
+		targets, err := c.storage.RetrieveAllWebTargets()
+		if err != nil {
+			log.Fatalf("Could not obtain all NMAP web targets. Error: %s", err)
+		}
 		log.Printf("There are %d targets for NMAP Web scan", len(targets))
 		for _, target := range targets {
 			sem <- struct{}{}

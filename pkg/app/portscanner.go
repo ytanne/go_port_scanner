@@ -91,15 +91,15 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 }
 
 func (c *App) AutonomousPortScanner() {
-	targets, err := c.storage.RetrieveAllNmapTargets()
-	if err != nil {
-		log.Fatalf("Could not obtain all NMAP targets. Error: %s", err)
-	}
 	sem := make(chan struct{}, 3)
-	var l int = len(targets)
 	ticker := time.NewTicker(time.Minute * 15)
 	for ; true; <-ticker.C {
 		log.Println("Starting autonomous NMAP check")
+		targets, err := c.storage.RetrieveAllNmapTargets()
+		if err != nil {
+			log.Fatalf("Could not obtain all NMAP targets. Error: %s", err)
+		}
+		var l int = len(targets)
 		log.Printf("There are %d targets for NMAP scan", l)
 		for _, target := range targets {
 			sem <- struct{}{}

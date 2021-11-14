@@ -121,14 +121,14 @@ func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) err
 }
 
 func (c *App) AutonomousARPScanner() {
-	targets, err := c.storage.RetrieveAllARPTargets()
-	if err != nil {
-		log.Fatalf("Could not obtain all ARP targets: %s", err)
-	}
 	sem := make(chan struct{}, 2)
 	ticker := time.NewTicker(time.Minute * 15)
 	for ; true; <-ticker.C {
 		log.Println("Starting autonomous ARP check")
+		targets, err := c.storage.RetrieveAllARPTargets()
+		if err != nil {
+			log.Fatalf("Could not obtain all ARP targets: %s", err)
+		}
 		log.Printf("There are %d targets for ARP scan", len(targets))
 		for _, target := range targets {
 			sem <- struct{}{}

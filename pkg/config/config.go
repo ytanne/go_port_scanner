@@ -46,12 +46,18 @@ func InitConfig(filepath string) *Config {
 	}
 	if cfg.Discord.ARPChannelID = os.Getenv("ARP_CHANNEL_ID"); cfg.Discord.ARPChannelID == "" {
 		log.Println("Could not obtain ARP channel ID")
+	} else {
+		log.Println("Obtained ARP channel ID:", cfg.Discord.ARPChannelID)
 	}
 	if cfg.Discord.PSChannelID = os.Getenv("PS_CHANNEL_ID"); cfg.Discord.PSChannelID == "" {
 		log.Println("Could not obtain PS channel ID")
+	} else {
+		log.Println("Obtained PS channel ID:", cfg.Discord.ARPChannelID)
 	}
 	if cfg.Discord.WPSChannelID = os.Getenv("WPS_CHANNEL_ID"); cfg.Discord.WPSChannelID == "" {
 		log.Println("Could not obtain WPS channel ID")
+	} else {
+		log.Println("Obtained WPS channel ID:", cfg.Discord.ARPChannelID)
 	}
 	return &cfg
 }
