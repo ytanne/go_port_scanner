@@ -81,8 +81,10 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 		return nil
 	}
 	if lastResult != len(ports) {
-		msg := fmt.Sprintf("Open #ALL_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n"))
-		c.SendMessage(msg, c.channelType[m.PS])
+		if !strings.Contains(target.IP, "/") {
+			msg := fmt.Sprintf("Open #ALL_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n"))
+			c.SendMessage(msg, c.channelType[m.PS])
+		}
 	} else {
 		c.SendMessage(fmt.Sprintf("No updates on #ALL_PORTS for %s", target.IP), c.channelType[m.PS])
 	}

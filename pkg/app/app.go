@@ -84,7 +84,7 @@ func (c *App) Run() error {
 				if workerCounter < workerLimit {
 					workerCounter++
 					go func(worker chan struct{}) {
-						c.runCommand(m.Msg, m.ChannelID)
+						c.runCommand(m.Msg, m.ChannelID, s)
 						worker <- struct{}{}
 					}(worker)
 				} else {
@@ -102,11 +102,11 @@ func (c *App) Run() error {
 	}
 }
 
-func (c *App) runCommand(cmd, channelID string) {
+func (c *App) runCommand(cmd, channelID string, s chan<- os.Signal) {
 	words := strings.Fields(cmd)
 	if len(words) <= 1 {
 		if len(words) == 1 {
-			c.singleCommandRun(words[0], channelID)
+			c.singleCommandRun(words[0], channelID, s)
 			return
 		}
 		if err := c.communicator.SendMessage("Not enough arguments", channelID); err != nil {
@@ -165,7 +165,7 @@ const helpMessage string = `
 /web_nmap -> setting web ports scan target. Accepts both single IP and IP with bitmask
 `
 
-func (c *App) singleCommandRun(cmd, channelID string) {
+func (c *App) singleCommandRun(cmd, channelID string, s chan<- os.Signal) {
 	switch cmd {
 	case "/help":
 		if err := c.communicator.SendMessage(helpMessage, channelID); err != nil {
@@ -176,5 +176,10 @@ func (c *App) singleCommandRun(cmd, channelID string) {
 		if err := c.communicator.SendMessage(msg, channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
+	case "/goodbye-bro":
+		if err := c.communicator.SendMessage("Всем покеда, я спать", channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
+		s <- os.Interrupt
 	}
 }

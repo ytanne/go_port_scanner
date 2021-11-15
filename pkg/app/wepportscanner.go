@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -75,17 +74,17 @@ func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) 
 		target.ErrStatus = -200
 		return err
 	}
-	if ports == nil {
+	if ports == "" {
 		log.Printf("No web ports found for %s", target.IP)
 		c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP), c.channelType[m.WPS])
 		return nil
 	}
-	target.Result = strings.Join(ports, "; ")
-	if lastResult != target.Result {
+	target.Result = ports
+	if len(lastResult) != len(target.Result) {
 		msg := fmt.Sprintf(
 			"Open #WEB_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s",
 			target.IP,
-			strings.Join(ports, "\n"),
+			ports,
 		)
 		c.SendMessage(msg, c.channelType[m.WPS])
 	} else {
