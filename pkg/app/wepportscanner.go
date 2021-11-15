@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -33,7 +34,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 
 		return nil
 	} else if err == nil {
-		if time.Since(t.ScanTime) > time.Minute*5 {
+		if time.Since(t.ScanTime) > time.Minute*15 {
 			lastResult := t.Result
 			err = c.RunWebPortScanner(t, lastResult)
 			if err != nil {
@@ -74,19 +75,21 @@ func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) 
 		target.ErrStatus = -200
 		return err
 	}
-	if ports == "" {
+	if ports == nil {
 		log.Printf("No web ports found for %s", target.IP)
 		c.SendMessage(fmt.Sprintf("No open #WEB_PORTS of %s found", target.IP), c.channelType[m.WPS])
 		return nil
 	}
-	target.Result = ports
+	target.Result = strings.Join(ports, "; ")
 	if len(lastResult) != len(target.Result) {
-		msg := fmt.Sprintf(
-			"Open #WEB_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s",
-			target.IP,
-			ports,
-		)
-		c.SendMessage(msg, c.channelType[m.WPS])
+		if !strings.Contains(target.IP, "/") {
+			msg := fmt.Sprintf(
+				"Open #WEB_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s",
+				target.IP,
+				ports,
+			)
+			c.SendMessage(msg, c.channelType[m.WPS])
+		}
 	} else {
 		c.SendMessage(fmt.Sprintf("No updates on #WEB_PORTS for %s", target.IP), c.channelType[m.WPS])
 	}

@@ -34,7 +34,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 
 		return nil
 	} else if err == nil {
-		if time.Since(t.ScanTime) > time.Minute*5 {
+		if time.Since(t.ScanTime) > time.Minute*15 {
 			lastResult := len(t.Result)
 			err = c.RunPortScanner(t, lastResult)
 			if err != nil {

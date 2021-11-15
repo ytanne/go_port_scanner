@@ -8,7 +8,7 @@ import (
 
 type NmapScanner interface {
 	ScanPorts(target string) ([]string, error)
-	ScanWebPorts(target string) (string, error)
+	ScanWebPorts(target string) ([]string, error)
 	ScanNetwork(target string) ([]string, error)
 }
 
@@ -37,13 +37,13 @@ func (ps *nmapScan) ScanPorts(target string) ([]string, error) {
 	return result, err
 }
 
-func (ps *nmapScan) ScanWebPorts(target string) (string, error) {
+func (ps *nmapScan) ScanWebPorts(target string) ([]string, error) {
 	ports, err := ps.repo.ScanWebPorts(target)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	// result := ps.rePorts.FindAllString(string(ports), -1)
-	return string(ports), err
+	result := ps.rePorts.FindAllString(string(ports), -1)
+	return result, err
 }
 
 func (ns *nmapScan) ScanNetwork(target string) ([]string, error) {
