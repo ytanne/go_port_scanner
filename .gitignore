@@ -1,2 +1,4 @@
 assets/config.yaml
 cache/*
+.env
+vendor

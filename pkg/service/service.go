@@ -45,7 +45,7 @@ type Service struct {
 func NewService(repo *repository.Repository) *Service {
 	return &Service{
 		Communicate: NewCommunicator(repo.Communicate),
-		Store:       NewServiceStorage(repo.Store),
+		Store:       NewDatabaseService(repo.Store),
 		NmapScan:    NewNmapScanner(repo.NmapScan),
 	}
 }

@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  ps:
+    container_name: ps
+    build: .
+    volumes:
+      - ./cache:/app/cache
+    env_file: .env
+    networks:
+      - my-network
+
+networks:
+  my-network:
+    driver: bridge

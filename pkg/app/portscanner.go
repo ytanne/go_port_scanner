@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
+	m "github.com/ytanne/go_nessus/pkg/models"
 )
 
 func (c *App) AddTargetToNmapScan(target string, id int) error {
-	t, err := c.serv.RetrieveNmapRecord(target, id)
+	log.Println("Obtained all ports scan target", target)
 
+	t, err := c.storage.RetrieveNmapRecord(target, id)
 	if err == sql.ErrNoRows {
 		log.Printf("No records found for %s", target)
-		t, err := c.serv.CreateNewNmapTarget(target, id)
+
+		t, err := c.storage.CreateNewNmapTarget(target, id)
 		if err != nil {
 			log.Printf("Could not add target %s to the table. Error: %s", target, err)
 			return err
@@ -29,11 +31,13 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 			t.ErrStatus = -200
 		}
 
-		c.serv.SaveNmapResult(t)
+		if _, err := c.storage.SaveNmapResult(t); err != nil {
+			log.Println("Storing nmap result failed:", err)
+		}
 
 		return nil
 	} else if err == nil {
-		if time.Now().Sub(t.ScanTime) > time.Minute*5 {
+		if time.Since(t.ScanTime) > time.Minute*15 {
 			lastResult := len(t.Result)
 
 			err = c.RunPortScanner(t, lastResult)
@@ -43,24 +47,27 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 				t.ErrStatus = -200
 			}
 
-			c.serv.SaveNmapResult(t)
+			if _, err := c.storage.SaveNmapResult(t); err != nil {
+				log.Println("Storing nmap result failed:", err)
+			}
+
 			return nil
 		}
 
 		if t.ErrStatus == -200 {
-			c.SendMessage(fmt.Sprintf("Could not do #ALL_PORT scan %s\n%s", t.IP, t.ErrMsg), 0)
+			c.SendMessage(fmt.Sprintf("Could not do #ALL_PORT scan %s\n%s", t.IP, t.ErrMsg), c.channelType[m.PS], startingCount)
+
 			return nil
 		}
 
-		c.SendMessage(
-			fmt.Sprintf(
-				"%s\nPreviously at #ALL_PORT scan of %s was found:\n%s",
-				t.IP,
-				t.ScanTime.Format(time.RFC3339),
-				t.Result,
-			),
-			0,
+		msg := fmt.Sprintf(
+			"%s\nPreviously at #ALL_PORT scan of %s was found:\n%s",
+			t.IP,
+			t.ScanTime.Format(time.RFC3339),
+			t.Result,
 		)
+
+		c.SendMessage(msg, c.channelType[m.PS], startingCount, startingCount)
 		return nil
 	}
 
@@ -70,10 +77,10 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 
 func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error {
 	// c.serv.SendMessage(fmt.Sprintf("Starting #ALL_PORT scanning %s", target.IP))
-	ports, err := c.serv.ScanPorts(c.ctx, target.IP)
+	ports, err := c.portScanner.ScanPorts(target.IP)
 	if err != nil {
 		log.Printf("Could not run Port scan on %s. Error: %s", target.IP, err)
-		c.SendMessage(fmt.Sprintf("Could not scan #ALL_PORTS of %s", target.IP), 0)
+		c.SendMessage(fmt.Sprintf("Could not scan #ALL_PORTS of %s", target.IP), c.channelType[m.PS], startingCount)
 		target.ErrMsg = err.Error()
 		target.ErrStatus = -200
 
@@ -82,18 +89,17 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 
 	if ports == nil {
 		log.Printf("No ports found for %s", target.IP)
-		c.SendMessage(fmt.Sprintf("No open #ALL_PORTS of %s found", target.IP), 0)
-
+		c.SendMessage(fmt.Sprintf("No open #ALL_PORTS of %s found", target.IP), c.channelType[m.PS], startingCount)
 		return nil
 	}
 
 	if lastResult != len(ports) {
-		c.SendMessage(
-			fmt.Sprintf("Open #ALL_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n")),
-			0,
-		)
+		if !strings.Contains(target.IP, "/") {
+			msg := fmt.Sprintf("Open #ALL_PORTS of %s:\nPORT\tSTATE\tSERVICE\n%s", target.IP, strings.Join(ports, "\n"))
+			c.SendMessage(msg, c.channelType[m.PS], startingCount)
+		}
 	} else {
-		c.SendMessage(fmt.Sprintf("No updates on #ALL_PORTS for %s", target.IP), 0)
+		c.SendMessage(fmt.Sprintf("No updates on #ALL_PORTS for %s", target.IP), c.channelType[m.PS], startingCount)
 	}
 
 	target.Result = strings.Join(ports, "; ")
@@ -101,21 +107,21 @@ func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error 
 }
 
 func (c *App) AutonomousPortScanner() {
-	targets, err := c.serv.RetrieveAllNmapTargets()
-	if err != nil {
-		log.Fatalf("Could not obtain all NMAP targets. Error: %s", err)
-	}
-
-	var wg sync.WaitGroup
-	var l int = len(targets)
-	for {
+	sem := make(chan struct{}, 3)
+	ticker := time.NewTicker(time.Minute * 15)
+	for ; true; <-ticker.C {
 		log.Println("Starting autonomous NMAP check")
+		targets, err := c.storage.RetrieveAllNmapTargets()
+		if err != nil {
+			log.Fatalf("Could not obtain all NMAP targets. Error: %s", err)
+		}
+
+		var l int = len(targets)
 		log.Printf("There are %d targets for NMAP scan", l)
+		for _, target := range targets {
+			sem <- struct{}{}
 
-		for i, target := range targets {
-			wg.Add(1)
-
-			go func(target *entities.NmapTarget) {
+			go func(target *entities.NmapTarget, sem <-chan struct{}) {
 				log.Printf("Doing NMAP scan of %s", target.IP)
 				lastResult := len(target.Result)
 
@@ -126,20 +132,15 @@ func (c *App) AutonomousPortScanner() {
 					target.ErrStatus = -200
 				}
 
-				if _, err := c.serv.SaveNmapResult(target); err != nil {
+				if _, err := c.storage.SaveNmapResult(target); err != nil {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.IP, err)
 				}
 
 				log.Printf("Finished NMAP scan of %s", target.IP)
-				wg.Done()
-			}(target)
-
-			if (i+1)%3 == 0 || (i+1) == l {
-				wg.Wait()
-			}
+				<-sem
+			}(target, sem)
 		}
 
 		log.Println("Finished autonomous NMAP check. Taking a break")
-		time.Sleep(time.Minute * 5)
 	}
 }
