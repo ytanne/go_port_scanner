@@ -1,13 +1,15 @@
 package service
 
 import (
+	"context"
+
 	"github.com/ytanne/go_nessus/pkg/entities"
 	"github.com/ytanne/go_nessus/pkg/repository"
 )
 
 type Communicate interface {
 	SendMessage(msg string) error
-	ReadMessage(msg chan string) error
+	ReadMessage(ctx context.Context, msg chan string) error
 }
 
 type Store interface {
@@ -29,23 +31,15 @@ type Store interface {
 }
 
 type NmapScan interface {
-	ScanPorts(target string) ([]string, error)
-	ScanWebPorts(target string) ([]string, error)
-	ScanNetwork(target string) ([]string, error)
-}
-
-type ARPScan interface {
-}
-
-type Nessus interface {
-	ListScans() (*entities.ScanList, error)
+	ScanPorts(ctx context.Context, target string) ([]string, error)
+	ScanWebPorts(ctx context.Context, target string) ([]string, error)
+	ScanNetwork(ctx context.Context, target string) ([]string, error)
 }
 
 type Service struct {
 	Communicate
 	Store
 	NmapScan
-	Nessus
 }
 
 func NewService(repo *repository.Repository) *Service {
@@ -53,6 +47,5 @@ func NewService(repo *repository.Repository) *Service {
 		Communicate: NewCommunicator(repo.Communicate),
 		Store:       NewServiceStorage(repo.Store),
 		NmapScan:    NewNmapScanner(repo.NmapScan),
-		Nessus:      NewNessusService(repo.Nessus),
 	}
 }

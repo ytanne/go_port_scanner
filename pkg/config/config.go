@@ -8,11 +8,6 @@ import (
 )
 
 type Config struct {
-	Nessus struct {
-		AccessKey string `yaml:"access_key"`
-		SecretKey string `yaml:"secret_key"`
-		URL       string `yaml:"url"`
-	} `yaml:"nessus"`
 	Telegram struct {
 		APItoken string `yaml:"api_token"`
 		ChatID   int64  `yaml:"chat_id"`

@@ -1,7 +1,9 @@
 package tg
 
 import (
-	"log"
+	"context"
+	"fmt"
+	"time"
 
 	_ "github.com/go-telegram-bot-api/telegram-bot-api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -18,12 +20,11 @@ type Telegram struct {
 }
 
 func NewTelegramConn(APItoken string, GroupID int64) (*Telegram, error) {
-	log.Printf("Obtained API token: %s", APItoken)
-	log.Printf("Group ID: %d", GroupID)
 	bot, err := tgbotapi.NewBotAPI(APItoken)
 	if err != nil {
 		return nil, err
 	}
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
@@ -36,25 +37,33 @@ func NewTelegramConn(APItoken string, GroupID int64) (*Telegram, error) {
 
 func (t *Telegram) SendMessage(msg string) error {
 	reply := tgbotapi.NewMessage(t.GroupID, msg)
+
 	_, err := t.Bot.Send(reply)
 	if err != nil {
-		_, err = t.Bot.Send(reply)
+		return fmt.Errorf("could not send message: %w", err)
 	}
-	return err
+
+	return nil
 }
 
-func (t *Telegram) ReadMessages(msg chan string) error {
+func (t *Telegram) ReadMessages(ctx context.Context, msg chan string) error {
 	updates, err := t.Bot.GetUpdatesChan(*t.TGconfigs)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get updates from channel %d: %w", t.GroupID, err)
 	}
 
-	for update := range updates {
-		if update.Message != nil {
-			msg <- update.Message.Text //fmt.Sprintf("%s: %s", update.Message.From, update.Message.Text)
+	for {
+		select {
+		case update := <-updates:
+			if update.Message != nil {
+				msg <- update.Message.Text
+			}
+		case <-ctx.Done():
+			t.Bot.StopReceivingUpdates()
+			close(msg)
+			return nil
+		case <-time.After(time.Second * 10):
+			// case for no updates
 		}
 	}
-
-	close(msg)
-	return nil
 }

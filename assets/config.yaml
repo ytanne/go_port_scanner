@@ -1,8 +1,0 @@
-telegram:
-  api_token: токен бота
-  chat_id: айдишка чата
-db:
-  init_sql: "./assets/init.sql"
-  alter_sql: "./assets/alter.sql"
-  type: "sqlite3"
-  path: "./cache/scan_results.db"

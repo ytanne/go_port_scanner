@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -12,7 +13,13 @@ import (
 	"github.com/ytanne/go_nessus/pkg/service"
 )
 
+const (
+	sendLimit     = 5
+	startingCount = 0
+)
+
 type App struct {
+	ctx  context.Context
 	serv *service.Service
 }
 
@@ -22,16 +29,22 @@ func NewApp(serv *service.Service) *App {
 	}
 }
 
-func (c *App) SendMessage(msg string) {
+func (c *App) SendMessage(msg string, counter int) {
+	if counter >= sendLimit {
+		log.Println("send limit exceeded")
+
+		return
+	}
+
 	if err := c.serv.SendMessage(msg); err != nil {
-		log.Printf("Could not send message. Error: %s", err)
 		if strings.Contains(err.Error(), "message is too long") {
 			l := len(msg) / 2
-			c.SendMessage(msg[:l])
-			c.SendMessage(msg[l:])
+			time.Sleep(time.Second * 5)
+			c.SendMessage(msg[:l], counter+1)
+			c.SendMessage(msg[l:], counter+1)
 		} else if strings.Contains(err.Error(), "Too Many Requests") {
 			time.Sleep(time.Second * 45)
-			c.SendMessage(msg)
+			c.SendMessage(msg, counter+1)
 		}
 	}
 }
@@ -40,12 +53,16 @@ func (c *App) Run() error {
 	var workerLimit int = 3
 	var workerCounter int
 	worker := make(chan struct{}, workerLimit)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c.ctx = ctx
+
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 	msgs := make(chan string, 3)
 
 	go func() {
-		err := c.serv.ReadMessage(msgs)
+		err := c.serv.ReadMessage(ctx, msgs)
 		if err != nil {
 			log.Printf("Could not read message from the bot. Error: %s", err)
 		}
@@ -69,13 +86,14 @@ func (c *App) Run() error {
 						worker <- struct{}{}
 					}(worker)
 				} else {
-					c.SendMessage("I'm too busy already. Try to scan later")
+					c.SendMessage("I'm too busy already. Try to scan later", startingCount)
 				}
 			}
 		case <-s:
 			fmt.Println("\nCtrl+C was pressed. Interrupting the process...")
 			close(s)
-			close(msgs)
+			cancel()
+
 			return nil
 		case <-worker:
 			workerCounter--
@@ -89,8 +107,10 @@ func (c *App) runCommand(cmd string) {
 		if err := c.serv.SendMessage("Not enough arguments"); err != nil {
 			log.Printf("Could not send message. Error: %s", err)
 		}
+
 		return
 	}
+
 	switch words[0] {
 	case "/reply":
 		if err := c.serv.SendMessage(words[1]); err != nil {

@@ -25,6 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not read file from %s to initialize DB. Error: %s", cfg.DB.InitSQL, err)
 	}
+
 	db, err := sql.Open(cfg.DB.Type, cfg.DB.Path)
 	if err != nil {
 		log.Fatal(err)
@@ -34,7 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	repo := repository.NewRepository(db, telegram, cfg.Nessus.AccessKey, cfg.Nessus.SecretKey, cfg.Nessus.URL)
+	repo := repository.NewRepository(db, telegram)
 	serv := service.NewService(repo)
 	a := app.NewApp(serv)
 

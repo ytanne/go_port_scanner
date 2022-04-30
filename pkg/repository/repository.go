@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
@@ -9,7 +10,7 @@ import (
 
 type Communicate interface {
 	SendMessage(msg string) error
-	ReadMessage(msg chan string) error
+	ReadMessage(ctx context.Context, msg chan string) error
 }
 
 type Store interface {
@@ -31,27 +32,21 @@ type Store interface {
 }
 
 type NmapScan interface {
-	ScanPorts(target string) ([]byte, error)
-	ScanWebPorts(target string) ([]byte, error)
-	ScanNetwork(target string) ([]byte, error)
-}
-
-type Nessus interface {
-	ListScans() (*entities.ScanList, error)
+	ScanPorts(ctx context.Context, target string) ([]byte, error)
+	ScanWebPorts(ctx context.Context, target string) ([]byte, error)
+	ScanNetwork(ctx context.Context, target string) ([]byte, error)
 }
 
 type Repository struct {
 	Store
 	Communicate
 	NmapScan
-	Nessus
 }
 
-func NewRepository(db *sql.DB, t *tg.Telegram, AccessKey, SecretKey, URL string) *Repository {
+func NewRepository(db *sql.DB, t *tg.Telegram) *Repository {
 	return &Repository{
 		Store:       NewDatabase(db),
 		Communicate: NewCommunicator(t),
 		NmapScan:    NewScanner(),
-		Nessus:      NewNessusClient(AccessKey, SecretKey, URL),
 	}
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"regexp"
 
 	"github.com/ytanne/go_nessus/pkg/repository"
@@ -22,8 +23,8 @@ func NewNmapScanner(repo repository.NmapScan) *NmapScanner {
 	}
 }
 
-func (ps *NmapScanner) ScanPorts(target string) ([]string, error) {
-	ports, err := ps.repo.ScanPorts(target)
+func (ps *NmapScanner) ScanPorts(ctx context.Context, target string) ([]string, error) {
+	ports, err := ps.repo.ScanPorts(ctx, target)
 	if err != nil {
 		return nil, err
 	}
@@ -31,8 +32,8 @@ func (ps *NmapScanner) ScanPorts(target string) ([]string, error) {
 	return result, err
 }
 
-func (ps *NmapScanner) ScanWebPorts(target string) ([]string, error) {
-	ports, err := ps.repo.ScanWebPorts(target)
+func (ps *NmapScanner) ScanWebPorts(ctx context.Context, target string) ([]string, error) {
+	ports, err := ps.repo.ScanWebPorts(ctx, target)
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +41,8 @@ func (ps *NmapScanner) ScanWebPorts(target string) ([]string, error) {
 	return result, err
 }
 
-func (ns *NmapScanner) ScanNetwork(target string) ([]string, error) {
-	ips, err := ns.repo.ScanNetwork(target)
+func (ns *NmapScanner) ScanNetwork(ctx context.Context, target string) ([]string, error) {
+	ips, err := ns.repo.ScanNetwork(ctx, target)
 	if err != nil {
 		return nil, err
 	}
