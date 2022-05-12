@@ -5,41 +5,30 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/ytanne/go_nessus/pkg/app"
+	"github.com/ytanne/go_nessus/pkg/composites"
 	"github.com/ytanne/go_nessus/pkg/config"
-	discordRepo "github.com/ytanne/go_nessus/pkg/repository/discord"
-	nmapRepository "github.com/ytanne/go_nessus/pkg/repository/nmap"
-	dbRepository "github.com/ytanne/go_nessus/pkg/repository/sqlite"
-	discordServ "github.com/ytanne/go_nessus/pkg/service/discord"
-	nmapService "github.com/ytanne/go_nessus/pkg/service/nmap"
-	dbService "github.com/ytanne/go_nessus/pkg/service/sqlite"
 )
 
 func main() {
 	cfg := config.InitConfig("./assets/config.yaml")
 
-	dbRepo, err := dbRepository.NewDatabaseRepository(cfg)
+	dbComp, err := composites.NewDBComposite(*cfg)
 	if err != nil {
-		log.Fatalln("Could not create new database repository:", err)
+		log.Println("could not initialize new database composite:", err)
+
+		return
 	}
 
-	dbServ := dbService.NewDatabaseService(dbRepo)
-
-	nmapRepo := nmapRepository.NewScannerRepository()
-	nmapServ := nmapService.NewNmapService(nmapRepo)
-
-	// tgRepo, err := tgRepository.NewCommunicatorRepository(cfg.Telegram.APItoken, cfg.Telegram.ChatID)
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-	// tgServ := tgService.NewCommunicatorService(tgRepo)
-	log.Println("Obtained discord token:", cfg.Discord.Token)
-	discordRepo, err := discordRepo.NewDiscordBot(cfg.Discord.Token)
+	comComp, err := composites.NewCommunicationComposite(*cfg)
 	if err != nil {
-		log.Fatalln("Could not create new discord bot:", err)
-	}
-	discordServ := discordServ.NewDiscordService(discordRepo)
+		log.Println("could not initialize new communication composite:", err)
 
-	a := app.NewApp(discordServ, dbServ, nmapServ)
+		return
+	}
+
+	scanComp := composites.NewScannerComposite()
+
+	a := app.NewApp(comComp.Serv, dbComp.DBServ, scanComp.Serv)
 	a.SetUpChannels(cfg.Discord.ARPChannelID, cfg.Discord.PSChannelID, cfg.Discord.WPSChannelID)
 
 	if err := a.Run(); err != nil {

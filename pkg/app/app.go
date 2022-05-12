@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -10,19 +11,21 @@ import (
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/models"
-	"github.com/ytanne/go_nessus/pkg/repository/discord"
-	"github.com/ytanne/go_nessus/pkg/service/nmap"
-	"github.com/ytanne/go_nessus/pkg/service/sqlite"
+)
+
+const (
+	startingCount = 0
 )
 
 type App struct {
-	communicator discord.Communicator
-	storage      sqlite.DBKeeper
-	portScanner  nmap.NmapScanner
+	ctx          context.Context
+	communicator Communicator
+	storage      Keeper
+	portScanner  PortScanner
 	channelType  map[int]string
 }
 
-func NewApp(communicator discord.Communicator, storage sqlite.DBKeeper, portScanner nmap.NmapScanner) *App {
+func NewApp(communicator Communicator, storage Keeper, portScanner PortScanner) *App {
 	return &App{
 		communicator: communicator,
 		storage:      storage,
@@ -43,7 +46,7 @@ func (c *App) SetUpChannels(arpChannelID, psChannelID, wpsChannelID string) {
 	}
 }
 
-func (c *App) SendMessage(msg, channelID string) {
+func (c *App) SendMessage(msg, channelID string, counter int) {
 	if channelID == "" {
 		log.Println("Empty channel ID obtained. Could not send message: ", msg)
 		return
@@ -52,11 +55,11 @@ func (c *App) SendMessage(msg, channelID string) {
 		log.Printf("Could not send message. Error: %s", err)
 		if strings.Contains(err.Error(), "message is too long") {
 			l := len(msg) / 2
-			c.SendMessage(msg[:l], channelID)
-			c.SendMessage(msg[l:], channelID)
+			c.SendMessage(msg[:l], channelID, counter+1)
+			c.SendMessage(msg[l:], channelID, counter+1)
 		} else if strings.Contains(err.Error(), "Too Many Requests") {
 			time.Sleep(time.Second * 45)
-			c.SendMessage(msg, channelID)
+			c.SendMessage(msg, channelID, counter+1)
 		}
 	}
 }
@@ -65,9 +68,13 @@ func (c *App) Run() error {
 	var workerLimit int = 5
 	var workerCounter int
 	worker := make(chan struct{}, workerLimit)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c.ctx = ctx
+
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
-	msgs := discord.DiscordChannel
+	msgChannel := c.communicator.MessageReadChannel()
 
 	go c.AutonomousARPScanner()
 	go c.AutonomousPortScanner()
@@ -77,7 +84,7 @@ func (c *App) Run() error {
 	var m models.Message
 	for {
 		select {
-		case m = <-msgs:
+		case m = <-msgChannel:
 			log.Printf("Obtained command - %s from %s", m.Msg, m.ChannelID)
 			log.Printf("# of free workers - %d", workerLimit-workerCounter)
 			if strings.HasPrefix(m.Msg, "/") {
@@ -88,13 +95,14 @@ func (c *App) Run() error {
 						worker <- struct{}{}
 					}(worker)
 				} else {
-					c.SendMessage("I'm too busy already. Try to scan later", m.ChannelID)
+					c.SendMessage("I'm too busy already. Try to scan later", m.ChannelID, startingCount)
 				}
 			}
 		case <-s:
 			fmt.Println("\nCtrl+C was pressed. Interrupting the process...")
 			close(s)
-			close(msgs)
+			cancel()
+
 			return nil
 		case <-worker:
 			workerCounter--
@@ -112,8 +120,10 @@ func (c *App) runCommand(cmd, channelID string, s chan<- os.Signal) {
 		if err := c.communicator.SendMessage("Not enough arguments", channelID); err != nil {
 			log.Printf("Could not send message. Error: %s", err)
 		}
+
 		return
 	}
+
 	switch words[0] {
 	case "/arp_channel_id":
 		channelID := words[1]
@@ -140,9 +150,9 @@ func (c *App) runCommand(cmd, channelID string, s chan<- os.Signal) {
 		if err := c.communicator.SendMessage(words[1], channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
-	case "/nmap":
+	case "/service":
 		if err := c.AddTargetToNmapScan(words[1], -1); err != nil {
-			log.Println("Adding target to nmap scan failed:", err)
+			log.Println("Adding target to service scan failed:", err)
 		}
 	case "/web_nmap":
 		if err := c.AddTargetToWebScan(words[1], -1); err != nil {
@@ -161,7 +171,7 @@ const helpMessage string = `
 /ps_channel_id -> setting channel ID to send all ports scan results into that channel
 /wps_channel_id -> setting channel ID to send web ports scan results into that channel
 /arpscan -> settings ARP scan target. Accepts both single IP and IP with bitmask
-/nmap -> setting all ports scan target. Accepts both single IP and IP with bitmask
+/service -> setting all ports scan target. Accepts both single IP and IP with bitmask
 /web_nmap -> setting web ports scan target. Accepts both single IP and IP with bitmask
 `
 
