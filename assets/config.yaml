@@ -3,3 +3,8 @@ db:
   alter_sql: "./assets/alter.sql"
   type: "sqlite3"
   path: "./cache/scan_results.db"
+discord:
+  token: ""
+  arp_channel_id: ""
+  ps_channel_id: ""
+  wps_channel_id: ""

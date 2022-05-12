@@ -4,15 +4,15 @@ import (
 	"context"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
-	"github.com/ytanne/go_nessus/pkg/repository"
+	"github.com/ytanne/go_nessus/pkg/models"
 )
 
-type Communicate interface {
-	SendMessage(msg string) error
-	ReadMessage(ctx context.Context, msg chan string) error
+type Communicator interface {
+	SendMessage(msg, channelID string) error
+	MessageReadChannel() chan models.Message
 }
 
-type Store interface {
+type Keeper interface {
 	CreateNewARPTarget(target string) (*entities.ARPTarget, error)
 	SaveARPResult(target *entities.ARPTarget) (int, error)
 	RetrieveARPRecord(target string) (*entities.ARPTarget, error)
@@ -30,22 +30,8 @@ type Store interface {
 	RetrieveAllWebTargets() ([]*entities.NmapTarget, error)
 }
 
-type NmapScan interface {
-	ScanPorts(ctx context.Context, target string) ([]string, error)
-	ScanWebPorts(ctx context.Context, target string) ([]string, error)
-	ScanNetwork(ctx context.Context, target string) ([]string, error)
-}
-
-type Service struct {
-	Communicate
-	Store
-	NmapScan
-}
-
-func NewService(repo *repository.Repository) *Service {
-	return &Service{
-		Communicate: NewCommunicator(repo.Communicate),
-		Store:       NewDatabaseService(repo.Store),
-		NmapScan:    NewNmapScanner(repo.NmapScan),
-	}
+type PortScanner interface {
+	ScanPorts(ctx context.Context, target string) (string, error)
+	ScanWebPorts(ctx context.Context, target string) (string, error)
+	ScanNetwork(ctx context.Context, target string) (string, error)
 }

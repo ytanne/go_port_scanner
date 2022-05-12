@@ -13,7 +13,6 @@ import (
 )
 
 func (c *App) AddTargetToARPScan(target string) error {
-	log.Println("Obtained ARP scan target", target)
 	t, err := c.storage.RetrieveARPRecord(target)
 	if err == sql.ErrNoRows {
 		log.Printf("No records found for %s", target)
@@ -96,8 +95,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 }
 
 func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) error {
-	// c.serv.SendMessage(fmt.Sprintf("Starting ARP scanning %s", target.Target))
-	ips, err := c.portScanner.ScanNetwork(target.Target)
+	ips, err := c.portScanner.ScanNetwork(c.ctx, target.Target)
 	if err != nil {
 		c.SendMessage(
 			fmt.Sprintf("Could not do ARP scan network of %s", target.Target),
@@ -233,12 +231,3 @@ func getDifference(slice1 []string, slice2 []string) []string {
 
 	return diff
 }
-
-// func (c App) goThroughTargets() {
-// 	log.Printf("Going through targets. Obtained length: %d", len(arpTargets))
-// 	for _, target := range arpTargets {
-// 		if err := c.RunARPScanner(target); err != nil {
-// 			log.Printf("Could not scan %s in autonomous mode: %s", target, err)
-// 		}
-// 	}
-// }

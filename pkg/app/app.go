@@ -11,25 +11,21 @@ import (
 	"time"
 
 	"github.com/ytanne/go_nessus/pkg/models"
-	"github.com/ytanne/go_nessus/pkg/repository/discord"
-	"github.com/ytanne/go_nessus/pkg/service/nmap"
-	"github.com/ytanne/go_nessus/pkg/service/sqlite"
 )
 
 const (
-	sendLimit     = 5
 	startingCount = 0
 )
 
 type App struct {
 	ctx          context.Context
-	communicator discord.Communicator
-	storage      sqlite.DBKeeper
-	portScanner  nmap.NmapScanner
+	communicator Communicator
+	storage      Keeper
+	portScanner  PortScanner
 	channelType  map[int]string
 }
 
-func NewApp(communicator discord.Communicator, storage sqlite.DBKeeper, portScanner nmap.NmapScanner) *App {
+func NewApp(communicator Communicator, storage Keeper, portScanner PortScanner) *App {
 	return &App{
 		communicator: communicator,
 		storage:      storage,
@@ -78,7 +74,7 @@ func (c *App) Run() error {
 
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
-	msgs := discord.DiscordChannel
+	msgChannel := c.communicator.MessageReadChannel()
 
 	go c.AutonomousARPScanner()
 	go c.AutonomousPortScanner()
@@ -88,7 +84,7 @@ func (c *App) Run() error {
 	var m models.Message
 	for {
 		select {
-		case m = <-msgs:
+		case m = <-msgChannel:
 			log.Printf("Obtained command - %s from %s", m.Msg, m.ChannelID)
 			log.Printf("# of free workers - %d", workerLimit-workerCounter)
 			if strings.HasPrefix(m.Msg, "/") {
@@ -154,9 +150,9 @@ func (c *App) runCommand(cmd, channelID string, s chan<- os.Signal) {
 		if err := c.communicator.SendMessage(words[1], channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
-	case "/nmap":
+	case "/service":
 		if err := c.AddTargetToNmapScan(words[1], -1); err != nil {
-			log.Println("Adding target to nmap scan failed:", err)
+			log.Println("Adding target to service scan failed:", err)
 		}
 	case "/web_nmap":
 		if err := c.AddTargetToWebScan(words[1], -1); err != nil {
@@ -175,7 +171,7 @@ const helpMessage string = `
 /ps_channel_id -> setting channel ID to send all ports scan results into that channel
 /wps_channel_id -> setting channel ID to send web ports scan results into that channel
 /arpscan -> settings ARP scan target. Accepts both single IP and IP with bitmask
-/nmap -> setting all ports scan target. Accepts both single IP and IP with bitmask
+/service -> setting all ports scan target. Accepts both single IP and IP with bitmask
 /web_nmap -> setting web ports scan target. Accepts both single IP and IP with bitmask
 `
 

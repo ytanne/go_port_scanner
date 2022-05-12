@@ -12,8 +12,6 @@ import (
 )
 
 func (c *App) AddTargetToWebScan(target string, id int) error {
-	log.Println("Obtained web ports scan target", target)
-
 	t, err := c.storage.RetrieveWebRecord(target, id)
 	if err == sql.ErrNoRows {
 		log.Printf("No records found for %s", target)
@@ -67,7 +65,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 			t.Result,
 		)
 
-		c.SendMessage(msg, c.channelType[m.WPS])
+		c.SendMessage(msg, c.channelType[m.WPS], startingCount)
 		return nil
 	}
 
@@ -77,8 +75,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 }
 
 func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) error {
-	// c.serv.SendMessage(fmt.Sprintf("Starting #WEB_PORT scanning %s", target.IP))
-	ports, err := c.portScanner.ScanWebPorts(target.IP)
+	ports, err := c.portScanner.ScanWebPorts(c.ctx, target.IP)
 	if err != nil {
 		log.Printf("Could not run Web Port scan on %s. Error: %s", target.IP, err)
 		c.SendMessage(fmt.Sprintf("Could not scan Web_PORTS of %s", target.IP), c.channelType[m.WPS], startingCount)

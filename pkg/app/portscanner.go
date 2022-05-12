@@ -67,7 +67,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 			t.Result,
 		)
 
-		c.SendMessage(msg, c.channelType[m.PS], startingCount, startingCount)
+		c.SendMessage(msg, c.channelType[m.PS], startingCount)
 		return nil
 	}
 
@@ -77,7 +77,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 
 func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error {
 	// c.serv.SendMessage(fmt.Sprintf("Starting #ALL_PORT scanning %s", target.IP))
-	ports, err := c.portScanner.ScanPorts(target.IP)
+	ports, err := c.portScanner.ScanPorts(c.ctx, target.IP)
 	if err != nil {
 		log.Printf("Could not run Port scan on %s. Error: %s", target.IP, err)
 		c.SendMessage(fmt.Sprintf("Could not scan #ALL_PORTS of %s", target.IP), c.channelType[m.PS], startingCount)

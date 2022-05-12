@@ -1,19 +1,18 @@
-package repository
+package app
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/ytanne/go_nessus/pkg/entities"
-	"github.com/ytanne/go_nessus/pkg/tg"
+	"github.com/ytanne/go_nessus/pkg/models"
 )
 
-type Communicate interface {
-	SendMessage(msg string) error
-	ReadMessage(ctx context.Context, msg chan string) error
+type Communicator interface {
+	SendMessage(msg, channelID string) error
+	MessageReadChannel() chan models.Message
 }
 
-type Store interface {
+type Keeper interface {
 	CreateNewARPTarget(target string) (*entities.ARPTarget, error)
 	SaveARPResult(target *entities.ARPTarget) (int, error)
 	RetrieveARPRecord(target string) (*entities.ARPTarget, error)
@@ -31,22 +30,8 @@ type Store interface {
 	RetrieveAllWebTargets() ([]*entities.NmapTarget, error)
 }
 
-type NmapScan interface {
-	ScanPorts(ctx context.Context, target string) ([]byte, error)
-	ScanWebPorts(ctx context.Context, target string) ([]byte, error)
-	ScanNetwork(ctx context.Context, target string) ([]byte, error)
-}
-
-type Repository struct {
-	Store
-	Communicate
-	NmapScan
-}
-
-func NewRepository(db *sql.DB, t *tg.Telegram) *Repository {
-	return &Repository{
-		Store:       NewDatabase(db),
-		Communicate: NewCommunicator(t),
-		NmapScan:    NewScanner(),
-	}
+type PortScanner interface {
+	ScanPorts(ctx context.Context, target string) ([]string, error)
+	ScanWebPorts(ctx context.Context, target string) ([]string, error)
+	ScanNetwork(ctx context.Context, target string) ([]string, error)
 }
