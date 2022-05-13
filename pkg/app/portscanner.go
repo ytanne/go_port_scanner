@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -11,16 +12,14 @@ import (
 	m "github.com/ytanne/go_nessus/pkg/models"
 )
 
-func (c *App) AddTargetToNmapScan(target string, id int) error {
-	log.Println("Obtained all ports scan target", target)
-
-	t, err := c.storage.RetrieveNmapRecord(target, id)
+func (c *App) AddTargetToNmapScan(IP string, id int) error {
+	t, err := c.storage.RetrieveNmapRecord(context.Background(), IP, id)
 	if err == sql.ErrNoRows {
-		log.Printf("No records found for %s", target)
+		log.Printf("No records found for %s", IP)
 
-		t, err := c.storage.CreateNewNmapTarget(target, id)
+		t, err := c.storage.CreateNewNmapTarget(context.Background(), entities.NmapTarget{IP: IP}, id)
 		if err != nil {
-			log.Printf("Could not add target %s to the table. Error: %s", target, err)
+			log.Printf("Could not add target %s to the table. Error: %s", IP, err)
 			return err
 		}
 
@@ -31,7 +30,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 			t.ErrStatus = -200
 		}
 
-		if _, err := c.storage.SaveNmapResult(t); err != nil {
+		if _, err := c.storage.SaveNmapResult(context.Background(), t); err != nil {
 			log.Println("Storing nmap result failed:", err)
 		}
 
@@ -47,7 +46,7 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 				t.ErrStatus = -200
 			}
 
-			if _, err := c.storage.SaveNmapResult(t); err != nil {
+			if _, err := c.storage.SaveNmapResult(context.Background(), t); err != nil {
 				log.Println("Storing nmap result failed:", err)
 			}
 
@@ -71,12 +70,11 @@ func (c *App) AddTargetToNmapScan(target string, id int) error {
 		return nil
 	}
 
-	log.Printf("Could not retrieve results for %s. Error: %s", target, err)
+	log.Printf("Could not retrieve results for %s. Error: %s", IP, err)
 	return err
 }
 
-func (c *App) RunPortScanner(target *entities.NmapTarget, lastResult int) error {
-	// c.serv.SendMessage(fmt.Sprintf("Starting #ALL_PORT scanning %s", target.IP))
+func (c *App) RunPortScanner(target entities.NmapTarget, lastResult int) error {
 	ports, err := c.portScanner.ScanPorts(c.ctx, target.IP)
 	if err != nil {
 		log.Printf("Could not run Port scan on %s. Error: %s", target.IP, err)
@@ -111,7 +109,7 @@ func (c *App) AutonomousPortScanner() {
 	ticker := time.NewTicker(time.Minute * 15)
 	for ; true; <-ticker.C {
 		log.Println("Starting autonomous NMAP check")
-		targets, err := c.storage.RetrieveAllNmapTargets()
+		targets, err := c.storage.RetrieveAllNmapTargets(context.Background())
 		if err != nil {
 			log.Fatalf("Could not obtain all NMAP targets. Error: %s", err)
 		}
@@ -121,7 +119,7 @@ func (c *App) AutonomousPortScanner() {
 		for _, target := range targets {
 			sem <- struct{}{}
 
-			go func(target *entities.NmapTarget, sem <-chan struct{}) {
+			go func(target entities.NmapTarget, sem <-chan struct{}) {
 				log.Printf("Doing NMAP scan of %s", target.IP)
 				lastResult := len(target.Result)
 
@@ -132,7 +130,7 @@ func (c *App) AutonomousPortScanner() {
 					target.ErrStatus = -200
 				}
 
-				if _, err := c.storage.SaveNmapResult(target); err != nil {
+				if _, err := c.storage.SaveNmapResult(context.Background(), target); err != nil {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.IP, err)
 				}
 

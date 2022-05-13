@@ -1,13 +1,20 @@
-build:
-	docker build -t standoff_bot .
+service_name = "ps"
 
-run: build
-	docker run -d --name standoff_bot -v /tmp/cache:/app/cache standoff_bot
+.PHONY: up
+up: 
+	docker-compose up -d --build
 
-clean:
-	docker rm -vf standoff_bot
+.PHONY: down
+down:
+	docker-compose down
 
-rmi: clean
-	docker rmi standoff_bot
+.PHONY: ps
+ps:
+	docker-compose ps
 
-re: rmi run
+.PHONY: logs
+logs:
+	docker-compose logs --tail 100 -f $(service_name)
+
+.PHONY: restart
+restart: down up

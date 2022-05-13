@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -11,14 +12,14 @@ import (
 	m "github.com/ytanne/go_nessus/pkg/models"
 )
 
-func (c *App) AddTargetToWebScan(target string, id int) error {
-	t, err := c.storage.RetrieveWebRecord(target, id)
+func (c *App) AddTargetToWebScan(IP string, id int) error {
+	t, err := c.storage.RetrieveWebRecord(context.Background(), IP, id)
 	if err == sql.ErrNoRows {
-		log.Printf("No records found for %s", target)
+		log.Printf("No records found for %s", IP)
 
-		t, err := c.storage.CreateNewWebTarget(target, id)
+		t, err := c.storage.CreateNewWebTarget(context.Background(), entities.NmapTarget{IP: IP}, id)
 		if err != nil {
-			log.Printf("Could not add target %s to the table. Error: %s", target, err)
+			log.Printf("Could not add target %s to the table. Error: %s", IP, err)
 
 			return err
 		}
@@ -30,7 +31,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 			t.ErrStatus = -200
 		}
 
-		if _, err := c.storage.SaveWebResult(t); err != nil {
+		if _, err := c.storage.SaveWebResult(context.Background(), t); err != nil {
 			log.Println("Storing web result failed:", err)
 		}
 
@@ -46,7 +47,7 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 				t.ErrStatus = -200
 			}
 
-			if _, err := c.storage.SaveWebResult(t); err != nil {
+			if _, err := c.storage.SaveWebResult(context.Background(), t); err != nil {
 				log.Println("Storing web result failed:", err)
 			}
 			return nil
@@ -69,12 +70,12 @@ func (c *App) AddTargetToWebScan(target string, id int) error {
 		return nil
 	}
 
-	log.Printf("Could not retrieve web results for %s. Error: %s", target, err)
+	log.Printf("Could not retrieve web results for %s. Error: %s", IP, err)
 
 	return err
 }
 
-func (c *App) RunWebPortScanner(target *entities.NmapTarget, lastResult string) error {
+func (c *App) RunWebPortScanner(target entities.NmapTarget, lastResult string) error {
 	ports, err := c.portScanner.ScanWebPorts(c.ctx, target.IP)
 	if err != nil {
 		log.Printf("Could not run Web Port scan on %s. Error: %s", target.IP, err)
@@ -117,7 +118,7 @@ func (c *App) AutonomousWebPortScanner() {
 	for ; true; <-ticker.C {
 		log.Println("Starting autonomous NMAP Web check")
 
-		targets, err := c.storage.RetrieveAllWebTargets()
+		targets, err := c.storage.RetrieveAllWebTargets(context.Background())
 		if err != nil {
 			log.Fatalf("Could not obtain all NMAP web targets. Error: %s", err)
 		}
@@ -126,11 +127,11 @@ func (c *App) AutonomousWebPortScanner() {
 		for _, target := range targets {
 			sem <- struct{}{}
 
-			go func(target *entities.NmapTarget, sem <-chan struct{}) {
+			go func(target entities.NmapTarget, sem <-chan struct{}) {
 				var lastResult string
 				log.Printf("Doing NMAP Web scan of %s", target.IP)
 
-				oldTarget, err := c.storage.RetrieveWebRecord(target.IP, target.ARPscanID)
+				oldTarget, err := c.storage.RetrieveWebRecord(context.Background(), target.IP, target.ARPscanID)
 				if err != nil {
 					log.Printf("Could not obtain old web record. Error: %s", err)
 					log.Printf("IP: %s. ID: %d", target.IP, target.ID)
@@ -145,7 +146,7 @@ func (c *App) AutonomousWebPortScanner() {
 					target.ErrStatus = -200
 				}
 
-				if _, err := c.storage.SaveWebResult(target); err != nil {
+				if _, err := c.storage.SaveWebResult(context.Background(), target); err != nil {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.IP, err)
 				}
 

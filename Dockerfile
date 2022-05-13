@@ -1,4 +1,4 @@
-FROM golang:1.15.12-buster
+FROM golang:1.17.0-buster
 WORKDIR /app
 COPY . .
 RUN go build -ldflags "-w -s" -o tg_bot cmd/main.go

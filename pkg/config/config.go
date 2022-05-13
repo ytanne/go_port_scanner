@@ -20,6 +20,12 @@ type Config struct {
 		PSChannelID  string `yaml:"ps_channel_id"`
 		WPSChannelID string `yaml:"wps_channel_id"`
 	} `yaml:"discord"`
+	Mongo struct {
+		Host           string `yaml:"host"`
+		Port           string `yaml:"port"`
+		Database       string `yaml:"database"`
+		MigrationsPath string `yaml:"migrations_path"`
+	} `yaml:"mongo"`
 }
 
 func InitConfig(filepath string) *Config {

@@ -12,7 +12,14 @@ import (
 func main() {
 	cfg := config.InitConfig("./assets/config.yaml")
 
-	dbComp, err := composites.NewDBComposite(*cfg)
+	// dbComp, err := composites.NewDBComposite(*cfg)
+	// if err != nil {
+	// 	log.Println("could not initialize new database composite:", err)
+
+	// 	return
+	// }
+
+	dbComp, err := composites.NewMongoComposite(*cfg)
 	if err != nil {
 		log.Println("could not initialize new database composite:", err)
 
@@ -28,7 +35,7 @@ func main() {
 
 	scanComp := composites.NewScannerComposite()
 
-	a := app.NewApp(comComp.Serv, dbComp.DBServ, scanComp.Serv)
+	a := app.NewApp(comComp.Serv, dbComp.Serv, scanComp.Serv)
 	a.SetUpChannels(cfg.Discord.ARPChannelID, cfg.Discord.PSChannelID, cfg.Discord.WPSChannelID)
 
 	if err := a.Run(); err != nil {

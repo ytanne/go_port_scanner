@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -13,10 +14,10 @@ import (
 )
 
 func (c *App) AddTargetToARPScan(target string) error {
-	t, err := c.storage.RetrieveARPRecord(target)
+	t, err := c.storage.RetrieveARPRecord(context.Background(), target)
 	if err == sql.ErrNoRows {
 		log.Printf("No records found for %s", target)
-		t, err := c.storage.CreateNewARPTarget(target)
+		t, err := c.storage.CreateNewARPTarget(context.Background(), entities.ARPTarget{Target: target})
 		if err != nil {
 			log.Printf("Could not add target %s to the table. Error: %s", target, err)
 
@@ -30,7 +31,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 			t.ErrStatus = -200
 		}
 
-		if _, err := c.storage.SaveARPResult(t); err != nil {
+		if _, err := c.storage.SaveARPResult(context.Background(), t); err != nil {
 			log.Println("Storing ARP result failed:", err)
 
 			return err
@@ -39,12 +40,12 @@ func (c *App) AddTargetToARPScan(target string) error {
 		log.Printf("Target ID - %d", t.ID)
 		go func() {
 			for _, ip := range t.IPs {
-				_, err := c.storage.CreateNewNmapTarget(ip, t.ID)
+				_, err := c.storage.CreateNewNmapTarget(context.Background(), entities.NmapTarget{IP: ip}, t.ID)
 				if err != nil {
 					log.Println("Creating new nmap target failed")
 				}
 
-				_, err = c.storage.CreateNewWebTarget(ip, t.ID)
+				_, err = c.storage.CreateNewWebTarget(context.Background(), entities.NmapTarget{IP: ip}, t.ID)
 				if err != nil {
 					log.Println("Creating new web target failed")
 				}
@@ -63,7 +64,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 				t.ErrStatus = -200
 			}
 
-			if _, err := c.storage.SaveARPResult(t); err != nil {
+			if _, err := c.storage.SaveARPResult(context.Background(), t); err != nil {
 				log.Println("Storing ARP result failed:", err)
 			}
 
@@ -94,7 +95,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 	return err
 }
 
-func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) error {
+func (c *App) RunARPScanner(target entities.ARPTarget, lastResult []string) error {
 	ips, err := c.portScanner.ScanNetwork(c.ctx, target.Target)
 	if err != nil {
 		c.SendMessage(
@@ -164,7 +165,7 @@ func (c *App) AutonomousARPScanner() {
 	for ; true; <-ticker.C {
 		log.Println("Starting autonomous ARP check")
 
-		targets, err := c.storage.RetrieveAllARPTargets()
+		targets, err := c.storage.RetrieveAllARPTargets(context.Background())
 		if err != nil {
 			log.Fatalf("Could not obtain all ARP targets: %s", err)
 		}
@@ -174,7 +175,7 @@ func (c *App) AutonomousARPScanner() {
 		for _, target := range targets {
 			sem <- struct{}{}
 
-			go func(target *entities.ARPTarget, sem <-chan struct{}) {
+			go func(target entities.ARPTarget, sem <-chan struct{}) {
 				lastResult := target.IPs
 
 				err = c.RunARPScanner(target, lastResult)
@@ -184,7 +185,7 @@ func (c *App) AutonomousARPScanner() {
 					target.ErrStatus = -200
 				}
 
-				if _, err := c.storage.SaveARPResult(target); err != nil {
+				if _, err := c.storage.SaveARPResult(context.Background(), target); err != nil {
 					log.Printf("Could not save ARP result of %s. Error: %s", target.Target, err)
 				}
 

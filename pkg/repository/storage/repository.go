@@ -17,7 +17,7 @@ type database struct {
 	db *sql.DB
 }
 
-func NewDatabaseRepository(cfg config.Config) (*database, error) {
+func NewDatabaseRepository3(cfg config.Config) (*database, error) {
 	initSQL, err := ioutil.ReadFile(cfg.DB.InitSQL)
 	if err != nil {
 		return nil, err
