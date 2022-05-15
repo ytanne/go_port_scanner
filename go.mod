@@ -1,4 +1,4 @@
-module github.com/ytanne/go_nessus
+module github.com/ytanne/go_port_scanner
 
 go 1.15
 

@@ -4,6 +4,10 @@ service_name = "ps"
 up: 
 	docker-compose up -d --build
 
+.PHONY: restart
+restart:
+	docker-compose restart
+
 .PHONY: down
 down:
 	docker-compose down
@@ -16,5 +20,5 @@ ps:
 logs:
 	docker-compose logs --tail 100 -f $(service_name)
 
-.PHONY: restart
+.PHONY: re
 restart: down up

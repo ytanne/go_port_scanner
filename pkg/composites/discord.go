@@ -3,10 +3,10 @@ package composites
 import (
 	"fmt"
 
-	"github.com/ytanne/go_nessus/pkg/app"
-	"github.com/ytanne/go_nessus/pkg/config"
-	repo "github.com/ytanne/go_nessus/pkg/repository/communication"
-	serv "github.com/ytanne/go_nessus/pkg/service/communication"
+	"github.com/ytanne/go_port_scanner/pkg/app"
+	"github.com/ytanne/go_port_scanner/pkg/config"
+	repo "github.com/ytanne/go_port_scanner/pkg/repository/communication"
+	serv "github.com/ytanne/go_port_scanner/pkg/service/communication"
 )
 
 type CommunicationComposite struct {

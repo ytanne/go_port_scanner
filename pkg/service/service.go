@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/ytanne/go_nessus/pkg/entities"
-	"github.com/ytanne/go_nessus/pkg/models"
+	"github.com/ytanne/go_port_scanner/pkg/entities"
+	"github.com/ytanne/go_port_scanner/pkg/models"
 )
 
 type Communicator interface {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ytanne/go_nessus/pkg/entities"
+	"github.com/ytanne/go_port_scanner/pkg/entities"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -15,17 +15,22 @@ func (m *mongoDB) CreateNewNmapTarget(ctx context.Context, target entities.NmapT
 		return entities.NmapTarget{}, fmt.Errorf("could not insert Nmap target. Error: %w.", err)
 	}
 
-	return target, fmt.Errorf("not implemented yet")
+	return target, nil
 }
 
 func (m *mongoDB) SaveNmapResult(ctx context.Context, target entities.NmapTarget) (int, error) {
-	if _, err := m.nmapCollection.UpdateOne(ctx, bson.M{"target": target.ARPscanID}, target); err != nil {
+	update := bson.M{
+		"$set": target,
+	}
+
+	if _, err := m.nmapCollection.UpdateOne(ctx, bson.M{"target": target.ARPscanID}, update); err != nil {
 		return -1, fmt.Errorf("could not update result. Error: %w", err)
 	}
 
-	return -1, fmt.Errorf("not implemented yet")
+	return target.ID, nil
 }
 
+//nolint
 func (m *mongoDB) RetrieveNmapRecord(ctx context.Context, targetIP string, id int) (entities.NmapTarget, error) {
 	var result entities.NmapTarget
 
@@ -53,11 +58,15 @@ func (m *mongoDB) RetrieveOldNmapTargets(ctx context.Context, timelimit int) ([]
 		return nil, fmt.Errorf("could not get results from cursor. Error: %w", err)
 	}
 
+	if len(results) == 0 {
+		return nil, fmt.Errorf("no old nmap  targets found")
+	}
+
 	return results, nil
 }
 
 func (m *mongoDB) RetrieveAllNmapTargets(ctx context.Context) ([]entities.NmapTarget, error) {
-	cursor, err := m.arpCollection.Find(ctx, bson.D{})
+	cursor, err := m.nmapCollection.Find(ctx, bson.D{})
 	if err != nil {
 		return nil, fmt.Errorf("could not find all targets. Error: %w", err)
 	}

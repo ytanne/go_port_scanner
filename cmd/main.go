@@ -4,9 +4,9 @@ import (
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/ytanne/go_nessus/pkg/app"
-	"github.com/ytanne/go_nessus/pkg/composites"
-	"github.com/ytanne/go_nessus/pkg/config"
+	"github.com/ytanne/go_port_scanner/pkg/app"
+	"github.com/ytanne/go_port_scanner/pkg/composites"
+	"github.com/ytanne/go_port_scanner/pkg/config"
 )
 
 func main() {

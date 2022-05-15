@@ -4,8 +4,6 @@ services:
   ps:
     container_name: ps
     build: .
-    volumes:
-      - ./cache:/app/cache
     networks:
       - my-network
     depends_on:
@@ -16,9 +14,8 @@ services:
     restart: always
     ports:
       - 27017:27017
-    # environment:
-    #   MONGO_INITDB_ROOT_USERNAME: root
-    #   MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./mongo-volume:/data/db
     networks:
       - my-network
 

@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/golang-migrate/migrate/v4/database/mongodb"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/ytanne/go_nessus/pkg/config"
+	"github.com/ytanne/go_port_scanner/pkg/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )

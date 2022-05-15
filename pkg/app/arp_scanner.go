@@ -2,20 +2,23 @@ package app
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/ytanne/go_nessus/pkg/entities"
-	m "github.com/ytanne/go_nessus/pkg/models"
+	"github.com/ytanne/go_port_scanner/pkg/entities"
+	m "github.com/ytanne/go_port_scanner/pkg/models"
+)
+
+const (
+	arpScanInterval = time.Minute*5
 )
 
 func (c *App) AddTargetToARPScan(target string) error {
 	t, err := c.storage.RetrieveARPRecord(context.Background(), target)
-	if err == sql.ErrNoRows {
+	if t.Target == "" {
 		log.Printf("No records found for %s", target)
 		t, err := c.storage.CreateNewARPTarget(context.Background(), entities.ARPTarget{Target: target})
 		if err != nil {
@@ -24,7 +27,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 			return err
 		}
 
-		err = c.RunARPScanner(t, nil)
+		err = c.RunARPScanner(&t, nil)
 		if err != nil {
 			log.Printf("Could not run ARP scan on %s. Error: %s", t.Target, err)
 			t.ErrMsg = err.Error()
@@ -39,25 +42,35 @@ func (c *App) AddTargetToARPScan(target string) error {
 
 		log.Printf("Target ID - %d", t.ID)
 		go func() {
-			for _, ip := range t.IPs {
-				_, err := c.storage.CreateNewNmapTarget(context.Background(), entities.NmapTarget{IP: ip}, t.ID)
+			for i, ip := range t.IPs {
+				nmapTarget, err := c.storage.CreateNewNmapTarget(context.Background(), entities.NmapTarget{IP: ip}, t.ID)
 				if err != nil {
-					log.Println("Creating new nmap target failed")
+					log.Println("Creating new nmap target failed:", err)
+				} else if i < nmapScanLimit {
+					err = c.RunPortScanner(&nmapTarget, -1)
+					if err != nil {
+						log.Printf("Scanning all ports of %s failed: %s", nmapTarget.IP, err)
+					}
 				}
 
-				_, err = c.storage.CreateNewWebTarget(context.Background(), entities.NmapTarget{IP: ip}, t.ID)
+				webTarget, err := c.storage.CreateNewWebTarget(context.Background(), entities.NmapTarget{IP: ip}, t.ID)
 				if err != nil {
-					log.Println("Creating new web target failed")
+					log.Println("Creating new web target failed:", err)
+				} else if i < webScanLimit {
+					err = c.RunWebPortScanner(&webTarget, "")
+					if err != nil {
+						log.Printf("Scanning web ports of %s failed: %s", nmapTarget.IP, err)
+					}
 				}
 			}
 		}()
 
 		return nil
 	} else if err == nil {
-		if time.Since(t.ScanTime) > time.Minute*5 {
+		if time.Since(t.ScanTime) >= arpScanInterval {
 			lastResult := t.IPs
 
-			err = c.RunARPScanner(t, lastResult)
+			err = c.RunARPScanner(&t, lastResult)
 			if err != nil {
 				log.Printf("Could not run ARP scan on %s. Error: %s", t.Target, err)
 				t.ErrMsg = err.Error()
@@ -77,8 +90,10 @@ func (c *App) AddTargetToARPScan(target string) error {
 				c.channelType[m.ARP],
 				startingCount,
 			)
+
 			return nil
 		}
+
 		msg := fmt.Sprintf(
 			"Previously at ARP scan of %s was found %d IPs in %s\n%s",
 			t.ScanTime.Format(time.RFC3339),
@@ -95,7 +110,7 @@ func (c *App) AddTargetToARPScan(target string) error {
 	return err
 }
 
-func (c *App) RunARPScanner(target entities.ARPTarget, lastResult []string) error {
+func (c *App) RunARPScanner(target *entities.ARPTarget, lastResult []string) error {
 	ips, err := c.portScanner.ScanNetwork(c.ctx, target.Target)
 	if err != nil {
 		c.SendMessage(
@@ -103,6 +118,7 @@ func (c *App) RunARPScanner(target entities.ARPTarget, lastResult []string) erro
 			c.channelType[m.ARP],
 			startingCount,
 		)
+
 		return err
 	}
 
@@ -112,10 +128,10 @@ func (c *App) RunARPScanner(target entities.ARPTarget, lastResult []string) erro
 			c.channelType[m.ARP],
 			startingCount,
 		)
+
 		return nil
 	}
 
-	sort.Strings(ips)
 	if lastResult == nil {
 		msg := fmt.Sprintf(
 			"ARP scan of %s:\n%s",
@@ -124,6 +140,10 @@ func (c *App) RunARPScanner(target entities.ARPTarget, lastResult []string) erro
 		)
 
 		c.SendMessage(msg, c.channelType[m.ARP], startingCount)
+		target.NumOfIPs = len(ips)
+		target.IPs = ips
+
+		return nil
 	}
 
 	equal := checkIfEqual(lastResult, ips)
@@ -135,6 +155,7 @@ func (c *App) RunARPScanner(target entities.ARPTarget, lastResult []string) erro
 				target.Target,
 				strings.Join(diff, "\n"),
 			)
+
 			c.SendMessage(msg, c.channelType[m.ARP], startingCount)
 		} else {
 			msg := fmt.Sprintf(
@@ -142,6 +163,7 @@ func (c *App) RunARPScanner(target entities.ARPTarget, lastResult []string) erro
 				target.Target,
 				strings.Join(diff, "\n"),
 			)
+
 			c.SendMessage(msg, c.channelType[m.ARP], startingCount)
 		}
 	} else {
@@ -160,14 +182,17 @@ func (c *App) RunARPScanner(target entities.ARPTarget, lastResult []string) erro
 
 func (c *App) AutonomousARPScanner() {
 	sem := make(chan struct{}, 2)
+	scanInterval := time.Minute * 15
 
-	ticker := time.NewTicker(time.Minute * 15)
+	ticker := time.NewTicker(scanInterval)
 	for ; true; <-ticker.C {
 		log.Println("Starting autonomous ARP check")
 
-		targets, err := c.storage.RetrieveAllARPTargets(context.Background())
+		targets, err := c.storage.RetrieveOldARPTargets(context.Background(), int(scanInterval.Minutes()))
 		if err != nil {
-			log.Fatalf("Could not obtain all ARP targets: %s", err)
+			log.Printf("could not obtain old ARP targets: %s", err)
+
+			continue
 		}
 
 		log.Printf("There are %d targets for ARP scan", len(targets))
@@ -178,7 +203,7 @@ func (c *App) AutonomousARPScanner() {
 			go func(target entities.ARPTarget, sem <-chan struct{}) {
 				lastResult := target.IPs
 
-				err = c.RunARPScanner(target, lastResult)
+				err = c.RunARPScanner(&target, lastResult)
 				if err != nil {
 					log.Printf("Could not run ARP scan on %s. Error: %s", target.Target, err)
 					target.ErrMsg = err.Error()

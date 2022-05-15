@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ytanne/go_nessus/pkg/repository/scanning"
+	"github.com/ytanne/go_port_scanner/pkg/repository/scanning"
 )
 
 func TestPortScan(t *testing.T) {

@@ -2,10 +2,8 @@ package communication
 
 import (
 	"fmt"
-	"log"
-
 	"github.com/bwmarrin/discordgo"
-	"github.com/ytanne/go_nessus/pkg/models"
+	"github.com/ytanne/go_port_scanner/pkg/models"
 )
 
 type discordBot struct {
@@ -22,8 +20,7 @@ func NewDiscordBot(token string) (*discordBot, error) {
 
 	discord, err := discordgo.New("Bot " + token)
 	if err != nil {
-		log.Println("Could not start session")
-		return nil, err
+		return nil, fmt.Errorf("could not start new discord bot: %w", err)
 	}
 
 	// Register the messageCreate func as a callback for MessageCreate events.
@@ -35,8 +32,7 @@ func NewDiscordBot(token string) (*discordBot, error) {
 	// Open a websocket connection to Discord and begin listening.
 	err = discord.Open()
 	if err != nil {
-		log.Println("Could not open websocken connection")
-		return nil, err
+		return nil, fmt.Errorf("could not open websocket connection: %w", err)
 	}
 
 	discBot.session = discord
@@ -63,11 +59,11 @@ func (d discordBot) messageCreate(s *discordgo.Session, m *discordgo.MessageCrea
 
 func (d discordBot) SendMessage(msg, channelID string) error {
 	if channelID == "" {
-		return fmt.Errorf("Empty channel ID obtained")
+		return fmt.Errorf("empty channel ID obtained")
 	}
 
 	if _, err := d.session.ChannelMessageSend(channelID, msg); err != nil {
-		return err
+		return fmt.Errorf("could not send msg to channel: %w", err)
 	}
 
 	return nil

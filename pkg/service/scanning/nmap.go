@@ -4,7 +4,7 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/ytanne/go_nessus/pkg/service"
+	"github.com/ytanne/go_port_scanner/pkg/service"
 )
 
 type serviceScan struct {

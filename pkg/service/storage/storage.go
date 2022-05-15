@@ -2,9 +2,11 @@ package storage
 
 import (
 	"context"
+	"math/rand"
+	"time"
 
-	"github.com/ytanne/go_nessus/pkg/entities"
-	"github.com/ytanne/go_nessus/pkg/service"
+	"github.com/ytanne/go_port_scanner/pkg/entities"
+	"github.com/ytanne/go_port_scanner/pkg/service"
 )
 
 type serviceStorage struct {
@@ -18,6 +20,9 @@ func NewDatabaseService(repo service.Keeper) *serviceStorage {
 }
 
 func (ss *serviceStorage) CreateNewARPTarget(ctx context.Context, target entities.ARPTarget) (entities.ARPTarget, error) {
+	target.ID = rand.Int()
+	target.ScanTime = time.Now()
+
 	return ss.repo.CreateNewARPTarget(ctx, target)
 }
 
@@ -26,6 +31,9 @@ func (ss *serviceStorage) RetrieveARPRecord(ctx context.Context, target string) 
 }
 
 func (ss *serviceStorage) SaveARPResult(ctx context.Context, target entities.ARPTarget) (int, error) {
+	target.ScanTime = time.Now()
+	target.ScanTime = time.Now()
+
 	return ss.repo.SaveARPResult(ctx, target)
 }
 
@@ -39,6 +47,9 @@ func (ss *serviceStorage) RetrieveAllARPTargets(ctx context.Context) ([]entities
 
 func (ss *serviceStorage) CreateNewNmapTarget(ctx context.Context, target entities.NmapTarget, id int) (entities.NmapTarget, error) {
 	target.ARPscanID = id
+	target.ID = rand.Int()
+	target.ScanTime = time.Now()
+
 	return ss.repo.CreateNewNmapTarget(ctx, target)
 }
 
@@ -47,6 +58,9 @@ func (ss *serviceStorage) RetrieveNmapRecord(ctx context.Context, target string,
 }
 
 func (ss *serviceStorage) SaveNmapResult(ctx context.Context, target entities.NmapTarget) (int, error) {
+	target.ScanTime = time.Now()
+	target.ScanTime = time.Now()
+
 	return ss.repo.SaveNmapResult(ctx, target)
 }
 
@@ -60,6 +74,9 @@ func (ss *serviceStorage) RetrieveAllNmapTargets(ctx context.Context) ([]entitie
 
 func (ss *serviceStorage) CreateNewWebTarget(ctx context.Context, target entities.NmapTarget, id int) (entities.NmapTarget, error) {
 	target.ARPscanID = id
+	target.ID = rand.Int()
+	target.ScanTime = time.Now()
+
 	return ss.repo.CreateNewWebTarget(ctx, target)
 }
 
@@ -68,6 +85,8 @@ func (ss *serviceStorage) RetrieveWebRecord(ctx context.Context, target string, 
 }
 
 func (ss *serviceStorage) SaveWebResult(ctx context.Context, target entities.NmapTarget) (int, error) {
+	target.ScanTime = time.Now()
+
 	return ss.repo.SaveWebResult(ctx, target)
 }
 

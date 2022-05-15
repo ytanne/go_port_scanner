@@ -5,25 +5,29 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ytanne/go_nessus/pkg/entities"
+	"github.com/ytanne/go_port_scanner/pkg/entities"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (m *mongoDB) CreateNewARPTarget(ctx context.Context, target entities.ARPTarget) (entities.ARPTarget, error) {
 	if _, err := m.arpCollection.InsertOne(ctx, target); err != nil {
-		return entities.ARPTarget{}, fmt.Errorf("could not insert ARP target. Error: %w.", err)
+		return entities.ARPTarget{}, fmt.Errorf("could not insert ARP target. Error: %w", err)
 	}
 
-	return target, fmt.Errorf("not implemented yet")
+	return target, nil
 }
 
 func (m *mongoDB) SaveARPResult(ctx context.Context, target entities.ARPTarget) (int, error) {
-	if _, err := m.arpCollection.UpdateOne(ctx, bson.M{"target": target.Target}, target); err != nil {
+	update := bson.M{
+		"$set": target,
+	}
+
+	if _, err := m.arpCollection.UpdateOne(ctx, bson.M{"target": target.Target}, update); err != nil {
 		return -1, fmt.Errorf("could not update result. Error: %w", err)
 	}
 
-	return target.ID, fmt.Errorf("not implemented yet")
+	return target.ID, nil
 }
 
 func (m *mongoDB) RetrieveARPRecord(ctx context.Context, targetName string) (entities.ARPTarget, error) {
@@ -46,6 +50,10 @@ func (m *mongoDB) RetrieveOldARPTargets(ctx context.Context, timelimit int) ([]e
 	var results []entities.ARPTarget
 	if err = cursor.All(ctx, &results); err != nil {
 		return nil, fmt.Errorf("could not get results from cursor. Error: %w", err)
+	}
+
+	if len(results) == 0 {
+		return nil, fmt.Errorf("no old arp targets found")
 	}
 
 	return results, nil

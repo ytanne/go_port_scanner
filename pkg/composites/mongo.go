@@ -1,10 +1,10 @@
 package composites
 
 import (
-	"github.com/ytanne/go_nessus/pkg/app"
-	"github.com/ytanne/go_nessus/pkg/config"
-	repo "github.com/ytanne/go_nessus/pkg/repository/storage"
-	serv "github.com/ytanne/go_nessus/pkg/service/storage"
+	"github.com/ytanne/go_port_scanner/pkg/app"
+	"github.com/ytanne/go_port_scanner/pkg/config"
+	repo "github.com/ytanne/go_port_scanner/pkg/repository/storage"
+	serv "github.com/ytanne/go_port_scanner/pkg/service/storage"
 )
 
 type MongoComposite struct {

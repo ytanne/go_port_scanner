@@ -3,23 +3,23 @@ package entities
 import "time"
 
 type ARPTarget struct {
-	ID        int
-	Target    string
-	NumOfIPs  int
-	IPs       []string
-	ScanTime  time.Time
-	ErrStatus int
-	ErrMsg    string
+	ID        int `bson:"id"`
+	Target    string `bson:"target"`
+	NumOfIPs  int `bson:"num_of_ips"`
+	IPs       []string `bson:"ips"`
+	ScanTime  time.Time  `bson:"scan_time"`
+	ErrStatus int `bson:"err_status"`
+	ErrMsg    string `bson:"err_msg"`
 }
 
 type NmapTarget struct {
-	ID        int
-	ARPscanID int
-	IP        string
-	Result    string
-	ScanTime  time.Time
-	ErrStatus int
-	ErrMsg    string
+	ID        int `bson:"id"`
+	ARPscanID int `bson:"arp_scan_id"`
+	IP        string `bson:"ip"`
+	Result    string `bson:"result"`
+	ScanTime  time.Time `bson:"scan_time"`
+	ErrStatus int `bson:"err_status"`
+	ErrMsg    string `bson:"err_msg"`
 }
 
 type Resource struct {
