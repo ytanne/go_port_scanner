@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	arpScanInterval = time.Minute*5
+	arpScanInterval = time.Minute * 5
 )
 
 func (c *App) AddTargetToARPScan(target string) error {
@@ -47,20 +47,32 @@ func (c *App) AddTargetToARPScan(target string) error {
 				if err != nil {
 					log.Println("Creating new nmap target failed:", err)
 				} else if i < nmapScanLimit {
-					err = c.RunPortScanner(&nmapTarget, -1)
-					if err != nil {
-						log.Printf("Scanning all ports of %s failed: %s", nmapTarget.IP, err)
-					}
+					go func(nmapTarget entities.NmapTarget) {
+						err = c.RunPortScanner(&nmapTarget, -1)
+						if err != nil {
+							log.Printf("Scanning all ports of %s failed: %s", nmapTarget.IP, err)
+						}
+
+						if _, err := c.storage.SaveNmapResult(context.Background(), nmapTarget); err != nil {
+							log.Println("Storing ARP result failed:", err)
+						}
+					}(nmapTarget)
 				}
 
 				webTarget, err := c.storage.CreateNewWebTarget(context.Background(), entities.NmapTarget{IP: ip}, t.ID)
 				if err != nil {
 					log.Println("Creating new web target failed:", err)
 				} else if i < webScanLimit {
-					err = c.RunWebPortScanner(&webTarget, "")
-					if err != nil {
-						log.Printf("Scanning web ports of %s failed: %s", nmapTarget.IP, err)
-					}
+					go func(webTarget entities.NmapTarget) {
+						err = c.RunWebPortScanner(&webTarget, "")
+						if err != nil {
+							log.Printf("Scanning web ports of %s failed: %s", nmapTarget.IP, err)
+						}
+
+						if _, err := c.storage.SaveWebResult(context.Background(), webTarget); err != nil {
+							log.Println("Storing ARP result failed:", err)
+						}
+					}(webTarget)
 				}
 			}
 		}()
