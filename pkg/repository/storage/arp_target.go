@@ -7,7 +7,6 @@ import (
 
 	"github.com/ytanne/go_port_scanner/pkg/entities"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (m *mongoDB) CreateNewARPTarget(ctx context.Context, target entities.ARPTarget) (entities.ARPTarget, error) {
@@ -42,7 +41,7 @@ func (m *mongoDB) RetrieveARPRecord(ctx context.Context, targetName string) (ent
 
 func (m *mongoDB) RetrieveOldARPTargets(ctx context.Context, timelimit int) ([]entities.ARPTarget, error) {
 	lastTime := time.Now().Add(time.Duration(-timelimit) * time.Minute)
-	cursor, err := m.arpCollection.Find(ctx, bson.M{"scanTime": bson.M{"lte": primitive.NewDateTimeFromTime(lastTime)}})
+	cursor, err := m.arpCollection.Find(ctx, bson.M{"scan_time": bson.M{"$lte": lastTime}})
 	if err != nil {
 		return nil, fmt.Errorf("could not find targets with timelimit of %d. Error: %w", timelimit, err)
 	}

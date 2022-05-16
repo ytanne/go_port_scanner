@@ -7,7 +7,6 @@ import (
 
 	"github.com/ytanne/go_port_scanner/pkg/entities"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (m *mongoDB) CreateNewWebTarget(ctx context.Context, target entities.NmapTarget) (entities.NmapTarget, error) {
@@ -23,7 +22,7 @@ func (m *mongoDB) SaveWebResult(ctx context.Context, target entities.NmapTarget)
 		"$set": target,
 	}
 
-	if _, err := m.webCollection.UpdateOne(ctx, bson.M{"target": target.ARPscanID}, update); err != nil {
+	if _, err := m.webCollection.UpdateOne(ctx, bson.M{"arp_scan_id": target.ARPscanID}, update); err != nil {
 		return -1, fmt.Errorf("could not update result. Error: %w", err)
 	}
 
@@ -33,7 +32,14 @@ func (m *mongoDB) SaveWebResult(ctx context.Context, target entities.NmapTarget)
 func (m *mongoDB) RetrieveWebRecord(ctx context.Context, targetName string, id int) (entities.NmapTarget, error) {
 	var result entities.NmapTarget
 
-	if err := m.webCollection.FindOne(ctx, bson.M{"target": targetName}).Decode(&result); err != nil {
+	filter := bson.M{}
+	if id == -1 {
+		filter = bson.M{"ip": targetName}
+	} else {
+		filter = bson.M{"ip": targetName, "arp_scan_id": id}
+	}
+
+	if err := m.webCollection.FindOne(ctx, filter).Decode(&result); err != nil {
 		return entities.NmapTarget{}, fmt.Errorf("could not find target %s. Error: %w", targetName, err)
 	}
 
@@ -42,7 +48,7 @@ func (m *mongoDB) RetrieveWebRecord(ctx context.Context, targetName string, id i
 
 func (m *mongoDB) RetrieveOldWebTargets(ctx context.Context, timelimit int) ([]entities.NmapTarget, error) {
 	lastTime := time.Now().Add(time.Duration(-timelimit) * time.Minute)
-	cursor, err := m.webCollection.Find(ctx, bson.M{"scanTime": bson.M{"lte": primitive.NewDateTimeFromTime(lastTime)}})
+	cursor, err := m.webCollection.Find(ctx, bson.M{"scan_time": bson.M{"$lte": lastTime}})
 	if err != nil {
 		return nil, fmt.Errorf("could not find targets with timelimit of %d. Error: %w", timelimit, err)
 	}

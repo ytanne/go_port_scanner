@@ -59,7 +59,6 @@ func (ss *serviceStorage) RetrieveNmapRecord(ctx context.Context, target string,
 
 func (ss *serviceStorage) SaveNmapResult(ctx context.Context, target entities.NmapTarget) (int, error) {
 	target.ScanTime = time.Now()
-	target.ScanTime = time.Now()
 
 	return ss.repo.SaveNmapResult(ctx, target)
 }
