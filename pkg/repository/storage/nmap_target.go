@@ -33,7 +33,7 @@ func (m *mongoDB) SaveNmapResult(ctx context.Context, target entities.NmapTarget
 func (m *mongoDB) RetrieveNmapRecord(ctx context.Context, targetIP string, id int) (entities.NmapTarget, error) {
 	var result entities.NmapTarget
 
-	filter := bson.M{}
+	var filter bson.M
 	if id == -1 {
 		filter = bson.M{"ip": targetIP}
 	} else {

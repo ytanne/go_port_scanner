@@ -32,7 +32,7 @@ func (m *mongoDB) SaveWebResult(ctx context.Context, target entities.NmapTarget)
 func (m *mongoDB) RetrieveWebRecord(ctx context.Context, targetName string, id int) (entities.NmapTarget, error) {
 	var result entities.NmapTarget
 
-	filter := bson.M{}
+	var filter bson.M
 	if id == -1 {
 		filter = bson.M{"ip": targetName}
 	} else {
