@@ -20,5 +20,9 @@ ps:
 logs:
 	docker-compose logs --tail 100 -f $(service_name)
 
+.PHONY: lint
+lint:
+	golangci-lint run --fix --allow-parallel-runners -v
+
 .PHONY: re
 restart: down up
