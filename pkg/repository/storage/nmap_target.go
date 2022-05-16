@@ -34,10 +34,12 @@ func (m *mongoDB) SaveNmapResult(ctx context.Context, target entities.NmapTarget
 func (m *mongoDB) RetrieveNmapRecord(ctx context.Context, targetIP string, id int) (entities.NmapTarget, error) {
 	var result entities.NmapTarget
 
-	filter := bson.D{{"$and", []bson.D{
-		{{"ip", targetIP}},
-		{{"arp_scan_id", id}},
-	}}}
+	filter := bson.D{{
+		Key: "$and",
+		Value: []bson.D{
+			{{Key: "ip", Value: targetIP}},
+			{{Key: "arp_scan_id", Value: id}},
+		}}}
 
 	if err := m.nmapCollection.FindOne(ctx, filter).Decode(&result); err != nil {
 		return entities.NmapTarget{}, fmt.Errorf("could not find target %s. Error: %w", targetIP, err)
