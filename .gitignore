@@ -1,4 +1,5 @@
 assets/config.yaml
-cache/*
 .env
 vendor
+.idea
+mongo-volume

@@ -1,93 +1,99 @@
 package storage
 
 import (
-	"github.com/ytanne/go_nessus/pkg/entities"
+	"context"
+	"math/rand"
+	"time"
+
+	"github.com/ytanne/go_port_scanner/pkg/entities"
+	"github.com/ytanne/go_port_scanner/pkg/service"
 )
 
-type DBKeeper interface {
-	CreateNewARPTarget(target string) (*entities.ARPTarget, error)
-	SaveARPResult(target *entities.ARPTarget) (int, error)
-	RetrieveARPRecord(target string) (*entities.ARPTarget, error)
-	RetrieveOldARPTargets(timelimit int) ([]*entities.ARPTarget, error)
-	RetrieveAllARPTargets() ([]*entities.ARPTarget, error)
-	CreateNewNmapTarget(target string, id int) (*entities.NmapTarget, error)
-	SaveNmapResult(target *entities.NmapTarget) (int, error)
-	RetrieveNmapRecord(target string, id int) (*entities.NmapTarget, error)
-	RetrieveOldNmapTargets(timelimit int) ([]*entities.NmapTarget, error)
-	RetrieveAllNmapTargets() ([]*entities.NmapTarget, error)
-	CreateNewWebTarget(target string, id int) (*entities.NmapTarget, error)
-	SaveWebResult(target *entities.NmapTarget) (int, error)
-	RetrieveWebRecord(target string, id int) (*entities.NmapTarget, error)
-	RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget, error)
-	RetrieveAllWebTargets() ([]*entities.NmapTarget, error)
-}
-
 type serviceStorage struct {
-	repo DBKeeper
+	repo service.Keeper
 }
 
-func NewDatabaseService(repo DBKeeper) DBKeeper {
+func NewDatabaseService(repo service.Keeper) *serviceStorage {
 	return &serviceStorage{
 		repo: repo,
 	}
 }
 
-func (ss *serviceStorage) CreateNewARPTarget(target string) (*entities.ARPTarget, error) {
-	return ss.repo.CreateNewARPTarget(target)
+func (ss *serviceStorage) CreateNewARPTarget(ctx context.Context, target entities.ARPTarget) (entities.ARPTarget, error) {
+	target.ID = rand.Int()
+	target.ScanTime = time.Now()
+
+	return ss.repo.CreateNewARPTarget(ctx, target)
 }
 
-func (ss *serviceStorage) RetrieveARPRecord(target string) (*entities.ARPTarget, error) {
-	return ss.repo.RetrieveARPRecord(target)
+func (ss *serviceStorage) RetrieveARPRecord(ctx context.Context, target string) (entities.ARPTarget, error) {
+	return ss.repo.RetrieveARPRecord(ctx, target)
 }
 
-func (ss *serviceStorage) SaveARPResult(target *entities.ARPTarget) (int, error) {
-	return ss.repo.SaveARPResult(target)
+func (ss *serviceStorage) SaveARPResult(ctx context.Context, target entities.ARPTarget) (int, error) {
+	target.ScanTime = time.Now()
+	target.ScanTime = time.Now()
+
+	return ss.repo.SaveARPResult(ctx, target)
 }
 
-func (ss *serviceStorage) RetrieveOldARPTargets(timelimit int) ([]*entities.ARPTarget, error) {
-	return ss.repo.RetrieveOldARPTargets(timelimit)
+func (ss *serviceStorage) RetrieveOldARPTargets(ctx context.Context, timelimit int) ([]entities.ARPTarget, error) {
+	return ss.repo.RetrieveOldARPTargets(ctx, timelimit)
 }
 
-func (ss *serviceStorage) RetrieveAllARPTargets() ([]*entities.ARPTarget, error) {
-	return ss.repo.RetrieveAllARPTargets()
+func (ss *serviceStorage) RetrieveAllARPTargets(ctx context.Context) ([]entities.ARPTarget, error) {
+	return ss.repo.RetrieveAllARPTargets(ctx)
 }
 
-func (ss *serviceStorage) CreateNewNmapTarget(target string, id int) (*entities.NmapTarget, error) {
-	return ss.repo.CreateNewNmapTarget(target, id)
+func (ss *serviceStorage) CreateNewNmapTarget(ctx context.Context, target entities.NmapTarget, id int) (entities.NmapTarget, error) {
+	target.ARPscanID = id
+	target.ID = rand.Int()
+	target.ScanTime = time.Now()
+
+	return ss.repo.CreateNewNmapTarget(ctx, target)
 }
 
-func (ss *serviceStorage) RetrieveNmapRecord(target string, id int) (*entities.NmapTarget, error) {
-	return ss.repo.RetrieveNmapRecord(target, id)
+func (ss *serviceStorage) RetrieveNmapRecord(ctx context.Context, target string, id int) (entities.NmapTarget, error) {
+	return ss.repo.RetrieveNmapRecord(ctx, target, id)
 }
 
-func (ss *serviceStorage) SaveNmapResult(target *entities.NmapTarget) (int, error) {
-	return ss.repo.SaveNmapResult(target)
+func (ss *serviceStorage) SaveNmapResult(ctx context.Context, target entities.NmapTarget) (int, error) {
+	target.ScanTime = time.Now()
+	target.ScanTime = time.Now()
+
+	return ss.repo.SaveNmapResult(ctx, target)
 }
 
-func (ss *serviceStorage) RetrieveOldNmapTargets(timelimit int) ([]*entities.NmapTarget, error) {
-	return ss.repo.RetrieveOldNmapTargets(timelimit)
+func (ss *serviceStorage) RetrieveOldNmapTargets(ctx context.Context, timelimit int) ([]entities.NmapTarget, error) {
+	return ss.repo.RetrieveOldNmapTargets(ctx, timelimit)
 }
 
-func (ss *serviceStorage) RetrieveAllNmapTargets() ([]*entities.NmapTarget, error) {
-	return ss.repo.RetrieveAllNmapTargets()
+func (ss *serviceStorage) RetrieveAllNmapTargets(ctx context.Context) ([]entities.NmapTarget, error) {
+	return ss.repo.RetrieveAllNmapTargets(ctx)
 }
 
-func (ss *serviceStorage) CreateNewWebTarget(target string, id int) (*entities.NmapTarget, error) {
-	return ss.repo.CreateNewWebTarget(target, id)
+func (ss *serviceStorage) CreateNewWebTarget(ctx context.Context, target entities.NmapTarget, id int) (entities.NmapTarget, error) {
+	target.ARPscanID = id
+	target.ID = rand.Int()
+	target.ScanTime = time.Now()
+
+	return ss.repo.CreateNewWebTarget(ctx, target)
 }
 
-func (ss *serviceStorage) RetrieveWebRecord(target string, id int) (*entities.NmapTarget, error) {
-	return ss.repo.RetrieveWebRecord(target, id)
+func (ss *serviceStorage) RetrieveWebRecord(ctx context.Context, target string, id int) (entities.NmapTarget, error) {
+	return ss.repo.RetrieveWebRecord(ctx, target, id)
 }
 
-func (ss *serviceStorage) SaveWebResult(target *entities.NmapTarget) (int, error) {
-	return ss.repo.SaveWebResult(target)
+func (ss *serviceStorage) SaveWebResult(ctx context.Context, target entities.NmapTarget) (int, error) {
+	target.ScanTime = time.Now()
+
+	return ss.repo.SaveWebResult(ctx, target)
 }
 
-func (ss *serviceStorage) RetrieveOldWebTargets(timelimit int) ([]*entities.NmapTarget, error) {
-	return ss.repo.RetrieveOldWebTargets(timelimit)
+func (ss *serviceStorage) RetrieveOldWebTargets(ctx context.Context, timelimit int) ([]entities.NmapTarget, error) {
+	return ss.repo.RetrieveOldWebTargets(ctx, timelimit)
 }
 
-func (ss *serviceStorage) RetrieveAllWebTargets() ([]*entities.NmapTarget, error) {
-	return ss.repo.RetrieveAllWebTargets()
+func (ss *serviceStorage) RetrieveAllWebTargets(ctx context.Context) ([]entities.NmapTarget, error) {
+	return ss.repo.RetrieveAllWebTargets(ctx)
 }

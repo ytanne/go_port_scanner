@@ -4,33 +4,39 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/ytanne/go_nessus/pkg/models"
+	"github.com/ytanne/go_port_scanner/pkg/models"
 )
 
 const (
 	startingCount = 0
+	sendLimit     = 10
 )
 
 type App struct {
-	ctx          context.Context
-	communicator Communicator
-	storage      Keeper
-	portScanner  PortScanner
-	channelType  map[int]string
+	ctx           context.Context
+	communicator  Communicator
+	storage       Keeper
+	portScanner   PortScanner
+	nucleiScanner NucleiScanner
+	channelType   map[int]string
 }
 
-func NewApp(communicator Communicator, storage Keeper, portScanner PortScanner) *App {
+func NewApp(communicator Communicator, storage Keeper, portScanner PortScanner, nucleiScanner NucleiScanner) *App {
+	rand.Seed(time.Now().UnixNano())
+
 	return &App{
-		communicator: communicator,
-		storage:      storage,
-		portScanner:  portScanner,
-		channelType:  make(map[int]string),
+		communicator:  communicator,
+		storage:       storage,
+		portScanner:   portScanner,
+		nucleiScanner: nucleiScanner,
+		channelType:   make(map[int]string),
 	}
 }
 
@@ -47,14 +53,24 @@ func (c *App) SetUpChannels(arpChannelID, psChannelID, wpsChannelID string) {
 }
 
 func (c *App) SendMessage(msg, channelID string, counter int) {
-	if channelID == "" {
-		log.Println("Empty channel ID obtained. Could not send message: ", msg)
+	if counter >= sendLimit {
+		log.Println("send limit exceeded")
+
 		return
 	}
+
+	if channelID == "" {
+		log.Println("Empty channel ID obtained. Could not send message: ", msg)
+
+		return
+	}
+
 	if err := c.communicator.SendMessage(msg, channelID); err != nil {
 		log.Printf("Could not send message. Error: %s", err)
+
 		if strings.Contains(err.Error(), "message is too long") {
 			l := len(msg) / 2
+
 			c.SendMessage(msg[:l], channelID, counter+1)
 			c.SendMessage(msg[l:], channelID, counter+1)
 		} else if strings.Contains(err.Error(), "Too Many Requests") {
@@ -69,7 +85,6 @@ func (c *App) Run() error {
 	var workerCounter int
 	worker := make(chan struct{}, workerLimit)
 	ctx, cancel := context.WithCancel(context.Background())
-
 	c.ctx = ctx
 
 	s := make(chan os.Signal, 1)
@@ -117,6 +132,7 @@ func (c *App) runCommand(cmd, channelID string, s chan<- os.Signal) {
 			c.singleCommandRun(words[0], channelID, s)
 			return
 		}
+
 		if err := c.communicator.SendMessage("Not enough arguments", channelID); err != nil {
 			log.Printf("Could not send message. Error: %s", err)
 		}
@@ -150,29 +166,69 @@ func (c *App) runCommand(cmd, channelID string, s chan<- os.Signal) {
 		if err := c.communicator.SendMessage(words[1], channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
-	case "/service":
+	case "/all_nmap":
+		msg := fmt.Sprintf("Starting WEB scan of ```%s```", words[1])
+		if err := c.communicator.SendMessage(msg, channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
+
 		if err := c.AddTargetToNmapScan(words[1], -1); err != nil {
 			log.Println("Adding target to service scan failed:", err)
 		}
 	case "/web_nmap":
+		msg := fmt.Sprintf("Starting WEB scan of ```%s```", words[1])
+		if err := c.communicator.SendMessage(msg, channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
+
 		if err := c.AddTargetToWebScan(words[1], -1); err != nil {
 			log.Println("Adding target to web scan failed:", err)
 		}
-	case "/arpscan":
+	case "/arp_scan":
+		msg := fmt.Sprintf("Starting ARP scan of ```%s```", words[1])
+		if err := c.communicator.SendMessage(msg, channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
+
 		if err := c.AddTargetToARPScan(words[1]); err != nil {
 			log.Println("Adding target to arp scan failed:", err)
+		}
+	case "/nuclei_scan":
+		msg := fmt.Sprintf("Starting nuclei scan of ```%s```", words[1])
+		if err := c.communicator.SendMessage(msg, channelID); err != nil {
+			log.Printf("Could not send message. Error %s", err)
+		}
+
+		var (
+			result string
+			err    error
+		)
+
+		result, err = c.nucleiScanner.ScanURL(context.TODO(), words[1])
+		if err != nil {
+			log.Println("Adding target to arp scan failed:", err)
+
+			return
+		}
+
+		err = c.communicator.SendFile(channelID, result)
+		if err != nil {
+			log.Printf("Could not send file. Error %s", err)
 		}
 	}
 }
 
 const helpMessage string = `
+/help -> print help message
 /get_this_channel_id -> obtains the channel ID where the command is executed
 /arp_channel_id -> setting channel ID to send ARP scan results into that channel
 /ps_channel_id -> setting channel ID to send all ports scan results into that channel
 /wps_channel_id -> setting channel ID to send web ports scan results into that channel
-/arpscan -> settings ARP scan target. Accepts both single IP and IP with bitmask
-/service -> setting all ports scan target. Accepts both single IP and IP with bitmask
+/arp_scan -> settings ARP scan target. Accepts both single IP and IP with bitmask
+/all_nmap -> setting all ports scan target. Accepts both single IP and IP with bitmask
 /web_nmap -> setting web ports scan target. Accepts both single IP and IP with bitmask
+/nuclei_scan -> setting nuclei scan target. Accepts either single IP or URL address 
+/goodbye -> stop bot
 `
 
 func (c *App) singleCommandRun(cmd, channelID string, s chan<- os.Signal) {
@@ -186,7 +242,7 @@ func (c *App) singleCommandRun(cmd, channelID string, s chan<- os.Signal) {
 		if err := c.communicator.SendMessage(msg, channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}
-	case "/goodbye-bro":
+	case "/goodbye":
 		if err := c.communicator.SendMessage("Всем покеда, я спать", channelID); err != nil {
 			log.Printf("Could not send message. Error %s", err)
 		}

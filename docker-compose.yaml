@@ -4,9 +4,18 @@ services:
   ps:
     container_name: ps
     build: .
+    networks:
+      - my-network
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
     volumes:
-      - ./cache:/app/cache
-    env_file: .env
+      - /tmp/mongo-volume:/data/db
     networks:
       - my-network
 

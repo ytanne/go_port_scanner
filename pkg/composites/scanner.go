@@ -1,20 +1,22 @@
 package composites
 
 import (
-	"github.com/ytanne/go_nessus/pkg/app"
-	repo "github.com/ytanne/go_nessus/pkg/repository/scanning"
-	serv "github.com/ytanne/go_nessus/pkg/service/scanning"
+	"github.com/ytanne/go_port_scanner/pkg/app"
+	"github.com/ytanne/go_port_scanner/pkg/config"
+	serv "github.com/ytanne/go_port_scanner/pkg/service/scanning"
 )
 
 type ScannerComposite struct {
-	Serv app.PortScanner
+	ServPort   app.PortScanner
+	ServNuclei app.NucleiScanner
 }
 
-func NewScannerComposite() ScannerComposite {
-	scanRepo := repo.NewScannerRepository()
-	scanServ := serv.NewScanService(scanRepo)
+func NewScannerComposite(cfg config.Config) ScannerComposite {
+	scanServ := serv.NewScanService()
+	nucleiServ := serv.NewNucleiService(cfg)
 
 	return ScannerComposite{
-		Serv: scanServ,
+		ServPort:   scanServ,
+		ServNuclei: nucleiServ,
 	}
 }

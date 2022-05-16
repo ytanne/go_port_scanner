@@ -3,10 +3,9 @@ package composites
 import (
 	"fmt"
 
-	"github.com/ytanne/go_nessus/pkg/app"
-	"github.com/ytanne/go_nessus/pkg/config"
-	repo "github.com/ytanne/go_nessus/pkg/repository/communication"
-	serv "github.com/ytanne/go_nessus/pkg/service/communication"
+	"github.com/ytanne/go_port_scanner/pkg/app"
+	"github.com/ytanne/go_port_scanner/pkg/config"
+	serv "github.com/ytanne/go_port_scanner/pkg/service/communication"
 )
 
 type CommunicationComposite struct {
@@ -14,14 +13,12 @@ type CommunicationComposite struct {
 }
 
 func NewCommunicationComposite(cfg config.Config) (CommunicationComposite, error) {
-	communicationRepo, err := repo.NewDiscordBot(cfg.Discord.Token)
+	commServ, err := serv.NewDiscordBot(cfg.Discord.Token)
 	if err != nil {
 		return CommunicationComposite{}, fmt.Errorf("Could not create new database repository: %w", err)
 	}
 
-	discordServ := serv.NewCommunicationService(communicationRepo)
-
 	return CommunicationComposite{
-		Serv: discordServ,
+		Serv: commServ,
 	}, nil
 }

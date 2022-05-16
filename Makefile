@@ -1,13 +1,28 @@
-build:
-	docker build -t standoff_bot .
+service_name = "ps"
 
-run: build
-	docker run -d --name standoff_bot -v /tmp/cache:/app/cache standoff_bot
+.PHONY: up
+up: 
+	docker-compose up -d --build
 
-clean:
-	docker rm -vf standoff_bot
+.PHONY: restart
+restart:
+	docker-compose restart
 
-rmi: clean
-	docker rmi standoff_bot
+.PHONY: down
+down:
+	docker-compose down
 
-re: rmi run
+.PHONY: ps
+ps:
+	docker-compose ps
+
+.PHONY: logs
+logs:
+	docker-compose logs --tail 100 -f $(service_name)
+
+.PHONY: lint
+lint:
+	golangci-lint run --fix --allow-parallel-runners -v
+
+.PHONY: re
+restart: down up
