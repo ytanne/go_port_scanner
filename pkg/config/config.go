@@ -26,6 +26,9 @@ type Config struct {
 		Database       string `yaml:"database"`
 		MigrationsPath string `yaml:"migrations_path"`
 	} `yaml:"mongo"`
+	Nuclei struct {
+		BinaryPath string `yaml:"bin_path"`
+	} `yaml:"nuclei"`
 }
 
 func InitConfig(filepath string) *Config {

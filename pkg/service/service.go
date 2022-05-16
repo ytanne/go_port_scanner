@@ -4,13 +4,7 @@ import (
 	"context"
 
 	"github.com/ytanne/go_port_scanner/pkg/entities"
-	"github.com/ytanne/go_port_scanner/pkg/models"
 )
-
-type Communicator interface {
-	SendMessage(msg, channelID string) error
-	MessageReadChannel() chan models.Message
-}
 
 type Keeper interface {
 	CreateNewARPTarget(ctx context.Context, target entities.ARPTarget) (entities.ARPTarget, error)
@@ -30,10 +24,4 @@ type Keeper interface {
 	RetrieveWebRecord(ctx context.Context, target string, id int) (entities.NmapTarget, error)
 	RetrieveOldWebTargets(ctx context.Context, timelimit int) ([]entities.NmapTarget, error)
 	RetrieveAllWebTargets(ctx context.Context) ([]entities.NmapTarget, error)
-}
-
-type PortScanner interface {
-	ScanPorts(ctx context.Context, target string) (string, error)
-	ScanWebPorts(ctx context.Context, target string) (string, error)
-	ScanNetwork(ctx context.Context, target string) (string, error)
 }

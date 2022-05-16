@@ -33,9 +33,9 @@ func main() {
 		return
 	}
 
-	scanComp := composites.NewScannerComposite()
+	scanComp := composites.NewScannerComposite(*cfg)
 
-	a := app.NewApp(comComp.Serv, dbComp.Serv, scanComp.Serv)
+	a := app.NewApp(comComp.Serv, dbComp.Serv, scanComp.ServPort, scanComp.ServNuclei)
 	a.SetUpChannels(cfg.Discord.ARPChannelID, cfg.Discord.PSChannelID, cfg.Discord.WPSChannelID)
 
 	if err := a.Run(); err != nil {

@@ -10,6 +10,7 @@ import (
 type Communicator interface {
 	SendMessage(msg, channelID string) error
 	MessageReadChannel() chan models.Message
+	SendFile(channelID, fileName string) error
 }
 
 type Keeper interface {
@@ -36,4 +37,8 @@ type PortScanner interface {
 	ScanPorts(ctx context.Context, target string) ([]string, error)
 	ScanWebPorts(ctx context.Context, target string) ([]string, error)
 	ScanNetwork(ctx context.Context, target string) ([]string, error)
+}
+
+type NucleiScanner interface {
+	ScanURL(ctx context.Context, url string) (string, error)
 }
